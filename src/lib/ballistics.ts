@@ -4,6 +4,7 @@ import type {
   SupportPoint,
   TrajectoryPoint,
   UserInputs,
+  WindOptions,
 } from "../types/ballistics"
 import { grainToKg, fpsToMps, mmToM } from "./units"
 
@@ -16,6 +17,18 @@ function toSpeedMs(inputs: UserInputs): number {
   }
 
   return inputs.speedValue
+}
+
+function getWindComponents(wind: WindOptions): { vwx: number; vwz: number } {
+  if (!wind.enabled) {
+    return { vwx: 0, vwz: 0 }
+  }
+
+  const directionRad = wind.windDirectionDeg * DEG_TO_RAD
+  return {
+    vwx: wind.windSpeedMps * Math.cos(directionRad),
+    vwz: wind.windSpeedMps * Math.sin(directionRad),
+  }
 }
 
 function findApexIndex(points: TrajectoryPoint[]): number {
@@ -52,59 +65,100 @@ function findLandIndex(points: TrajectoryPoint[]): number {
   return bestIndex
 }
 
-export function simulateBallistics(inputs: UserInputs, settings: AdvancedSettings): BallisticsResult {
+export function simulateBallistics(
+  inputs: UserInputs,
+  settings: AdvancedSettings,
+  wind: WindOptions = { enabled: false, windSpeedMps: 0, windDirectionDeg: 90 },
+): BallisticsResult {
   const speedMs = toSpeedMs(inputs)
   const massKg = grainToKg(inputs.weightGrain)
   const radiusM = mmToM(inputs.diameterMm) / 2
   const areaM2 = Math.PI * radiusM * radiusM
-  const dragFactorK = (0.5 * settings.rho * settings.cw * areaM2) / massKg
+
+  const dragFactorK = settings.kOverride && settings.kOverride > 0
+    ? settings.kOverride
+    : (0.5 * settings.rho * settings.cw * areaM2) / massKg
 
   const angleRad = inputs.angleDeg * DEG_TO_RAD
   const maxSteps = Math.ceil(settings.maxTimeSec / settings.dt)
+  const simulationMode = settings.simulationMode ?? "excel"
 
   let timeSec = 0
   let xM = 0
   let yM = 0
+  let zM = 0
   let vxMs = speedMs * Math.cos(angleRad)
   let vyMs = speedMs * Math.sin(angleRad)
+  let vzMs = 0
 
-  const points: TrajectoryPoint[] = [{ timeSec, xM, yM, vxMs, vyMs }]
+  const { vwx, vwz } = getWindComponents(wind)
+
+  const points: TrajectoryPoint[] = [{ timeSec, xM, yM, zM, vxMs, vyMs, vzMs }]
 
   for (let step = 0; step < maxSteps; step += 1) {
-    const speed = Math.sqrt(vxMs * vxMs + vyMs * vyMs)
+    const speed = Math.sqrt(vxMs * vxMs + vyMs * vyMs + vzMs * vzMs)
+    const airVx = vxMs - vwx
+    const airVy = vyMs
+    const airVz = vzMs - vwz
+    const airSpeed = Math.sqrt(airVx * airVx + airVy * airVy + airVz * airVz)
 
-    const as = -dragFactorK * speed * speed
-    const ratioX = speed > EPSILON ? vxMs / speed : 0
-    const ratioY = speed > EPSILON ? Math.abs(vyMs / speed) : 0
-    const asx = as * ratioX
-    const asy = as * ratioY
+    let axDrag = 0
+    let ayDrag = 0
+    let azDrag = 0
+
+    if (simulationMode === "physics") {
+      const effectiveSpeed = wind.enabled ? airSpeed : speed
+      axDrag = -dragFactorK * effectiveSpeed * (wind.enabled ? airVx : vxMs)
+      ayDrag = -dragFactorK * effectiveSpeed * (wind.enabled ? airVy : vyMs)
+      azDrag = -dragFactorK * effectiveSpeed * (wind.enabled ? airVz : vzMs)
+    } else {
+      const effectiveSpeed = wind.enabled ? airSpeed : speed
+      const as = -dragFactorK * effectiveSpeed * effectiveSpeed
+      const ratioX = effectiveSpeed > EPSILON ? (wind.enabled ? airVx : vxMs) / effectiveSpeed : 0
+      const ratioY = effectiveSpeed > EPSILON ? Math.abs((wind.enabled ? airVy : vyMs) / effectiveSpeed) : 0
+      const ratioZ = effectiveSpeed > EPSILON ? (wind.enabled ? airVz : vzMs) / effectiveSpeed : 0
+
+      axDrag = as * ratioX
+      ayDrag = as * ratioY
+      azDrag = as * ratioZ
+    }
+
     const agy = -settings.g
 
-    const vxNext = vxMs + settings.dt * asx
-    const vyNext = vyMs + settings.dt * (asy + agy)
+    const vxNext = vxMs + settings.dt * axDrag
+    const vyNext = vyMs + settings.dt * (ayDrag + agy)
+    const vzNext = vzMs + settings.dt * azDrag
 
     const xNext = xM + ((vxMs + vxNext) / 2) * settings.dt
     const yNext = yM + ((vyMs + vyNext) / 2) * settings.dt
+    const zNext = zM + ((vzMs + vzNext) / 2) * settings.dt
 
     timeSec += settings.dt
     xM = xNext
     yM = yNext
+    zM = zNext
     vxMs = vxNext
     vyMs = vyNext
+    vzMs = vzNext
 
-    if (!Number.isFinite(xM) || !Number.isFinite(yM) || !Number.isFinite(vxMs) || !Number.isFinite(vyMs)) {
+    if (
+      !Number.isFinite(xM) ||
+      !Number.isFinite(yM) ||
+      !Number.isFinite(zM) ||
+      !Number.isFinite(vxMs) ||
+      !Number.isFinite(vyMs) ||
+      !Number.isFinite(vzMs)
+    ) {
       break
     }
 
-    points.push({ timeSec, xM, yM, vxMs, vyMs })
+    points.push({ timeSec, xM, yM, zM, vxMs, vyMs, vzMs })
   }
 
   const apexIndex = findApexIndex(points)
   const landIndex = findLandIndex(points)
   const rawNullDistanceM = points[landIndex]?.xM ?? 0
 
-  // Excel compact sheet uses a post-processed null-point value. This factor keeps
-  // parity with the workbook while preserving the underlying simulation model.
   const excelNullpointFactor =
     1 + 0.04265535463604971 * Math.pow(Math.sin(angleRad), 1.5113424701944063)
 
@@ -132,6 +186,23 @@ function findApproxIndex(points: TrajectoryPoint[], targetX: number, startIndex:
   }
 
   return index
+}
+
+export function findApproxPointAtDistance(points: TrajectoryPoint[], targetDistanceM: number): TrajectoryPoint {
+  if (points.length === 0) {
+    return {
+      timeSec: 0,
+      xM: 0,
+      yM: 0,
+      zM: 0,
+      vxMs: 0,
+      vyMs: 0,
+      vzMs: 0,
+    }
+  }
+
+  const index = findApproxIndex(points, targetDistanceM, 0)
+  return points[index]
 }
 
 export function buildSupportPoints(
@@ -190,7 +261,6 @@ export function filterCurvePoints(points: TrajectoryPoint[], endDistanceM: numbe
       break
     }
 
-    // Keep only the forward trajectory branch to avoid unstable tail points.
     if (point.xM + 1e-9 < lastX) {
       break
     }

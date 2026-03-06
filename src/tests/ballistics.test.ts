@@ -58,4 +58,58 @@ describe("ballistics excel parity", () => {
       expect(point.effectiveDistanceM).toBeLessThanOrEqual(point.targetDistanceM)
     })
   })
+
+  it("keeps drift near zero when wind speed is zero", () => {
+    const input: UserInputs = {
+      speedValue: 150,
+      speedUnit: "fps",
+      diameterMm: 7.6,
+      weightGrain: 440,
+      angleDeg: 30,
+    }
+
+    const result = simulateBallistics(input, DEFAULT_ADVANCED_SETTINGS, {
+      enabled: true,
+      windSpeedMps: 0,
+      windDirectionDeg: 90,
+    })
+
+    const lastPoint = result.points[result.points.length - 1]
+    expect(Math.abs(lastPoint.zM)).toBeLessThan(0.001)
+  })
+
+  it("produces lateral drift with wind", () => {
+    const input: UserInputs = {
+      speedValue: 150,
+      speedUnit: "fps",
+      diameterMm: 7.6,
+      weightGrain: 440,
+      angleDeg: 30,
+    }
+
+    const result = simulateBallistics(input, DEFAULT_ADVANCED_SETTINGS, {
+      enabled: true,
+      windSpeedMps: 5,
+      windDirectionDeg: 90,
+    })
+
+    const pointAt50 = result.points.find((point) => point.xM >= 50)
+    expect(pointAt50).toBeDefined()
+    expect(Math.abs(pointAt50?.zM ?? 0)).toBeGreaterThan(0.0001)
+  })
+
+  it("changes output when simulation mode switches", () => {
+    const input: UserInputs = {
+      speedValue: 150,
+      speedUnit: "fps",
+      diameterMm: 7.6,
+      weightGrain: 440,
+      angleDeg: 30,
+    }
+
+    const excel = simulateBallistics(input, { ...DEFAULT_ADVANCED_SETTINGS, simulationMode: "excel" })
+    const physics = simulateBallistics(input, { ...DEFAULT_ADVANCED_SETTINGS, simulationMode: "physics" })
+
+    expect(Math.abs(excel.nullDistanceM - physics.nullDistanceM)).toBeGreaterThan(0.01)
+  })
 })

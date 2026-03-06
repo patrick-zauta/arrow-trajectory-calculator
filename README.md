@@ -6,23 +6,22 @@ React + TypeScript Single Page Application als eigenstaendige Ballistik-App fuer
 
 ## Features
 
-- Preset 1: `Standard (Flugparabel_BSW)`
-- Preset 2: `Pip_ELB_50_Holz 55-60 violett.lime`
-- Einheitenumschaltung Geschwindigkeit: `fps` <-> `m/s`
-- Winkelmodus:
-  - Feineinstellung (Slider, +/- Buttons, Schritt 0.1 oder 0.01)
-  - Direkteingabe (Number Input, Feineinstellung deaktiviert)
-- Kennwerte:
-  - Distanz Nullpunkt (m)
-  - Distanz Scheitelpunkt (m)
-  - Hoehe Scheitelpunkt (m)
-- Flugkurvenchart mit Toggle:
-  - Bis Scheitelpunkt
-  - Bis Nullpunkt
-- Stuetzpunkttabelle alle 2 m mit Excel-Approx-Match-Logik
-- CSV Export der Tabelle
-- localStorage Persistenz fuer letzte Eingaben
-- Vitest Akzeptanztests gegen Excel-Zielwerte
+- Reiter-Navigation mit HashRouter:
+  - `/#/flight`
+  - `/#/aim`
+  - `/#/setup`
+  - `/#/compare`
+  - `/#/presets`
+  - `/#/info`
+- Globaler Active Setup State (Zustand + localStorage Persistenz)
+- Flugparabel mit Kennwerten, Holdover-Tabelle, Winddrift und Kalibrierung
+- Zielhilfe mit Holdover, Winkel-Solver, Pin-Empfehlung und Range Card
+- Setup Rechner fuer Geschwindigkeitsschaetzung aus Bogenparametern
+- Vergleichsmodus fuer bis zu vier Setups mit Overlay-Chart
+- Preset Manager mit Import/Export und Share-Link-Parameter
+- Komponenten Builder mit Live-Gewichtssumme und Uebernahme in Active Setup
+- Print View Route fuer Range Card: `/#/range-print`
+- Vitest Test-Suite fuer Rechenkerne, Store, Routing und Import/Export
 
 ## Tech Stack
 

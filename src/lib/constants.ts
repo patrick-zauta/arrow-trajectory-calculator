@@ -6,6 +6,8 @@ export const DEFAULT_ADVANCED_SETTINGS: AdvancedSettings = {
   rho: 1.2,
   dt: 0.001,
   maxTimeSec: 30,
+  kOverride: null,
+  simulationMode: "excel",
 }
 
 export const EXTENDED_LIMITS = {

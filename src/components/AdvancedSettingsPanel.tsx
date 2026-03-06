@@ -6,7 +6,7 @@ interface AdvancedSettingsProps {
 }
 
 export function AdvancedSettingsPanel({ settings, onSettingsChange }: AdvancedSettingsProps) {
-  const update = <K extends keyof AdvancedSettings>(key: K, value: number) => {
+  const update = <K extends keyof AdvancedSettings>(key: K, value: AdvancedSettings[K]) => {
     onSettingsChange({
       ...settings,
       [key]: value,
@@ -18,6 +18,22 @@ export function AdvancedSettingsPanel({ settings, onSettingsChange }: AdvancedSe
       <summary>Advanced Settings</summary>
 
       <div className="advanced-grid">
+        <label className="field">
+          <span>Simulation Mode</span>
+          <select
+            value={settings.simulationMode ?? "excel"}
+            onChange={(event) =>
+              update("simulationMode", event.target.value as AdvancedSettings["simulationMode"])
+            }
+          >
+            <option value="excel">Excel kompatibel</option>
+            <option value="physics">Physik sauber</option>
+          </select>
+          <small>
+            Excel: asy mit abs. Physik: Drag ohne abs entlang Geschwindigkeitsvektor.
+          </small>
+        </label>
+
         <label className="field">
           <span>Cw</span>
           <input
@@ -75,6 +91,22 @@ export function AdvancedSettingsPanel({ settings, onSettingsChange }: AdvancedSe
             min={5}
             max={60}
             onChange={(event) => update("maxTimeSec", Number(event.target.value))}
+          />
+        </label>
+
+        <label className="field">
+          <span>k Override (optional)</span>
+          <input
+            type="number"
+            value={settings.kOverride ?? ""}
+            step={0.0001}
+            min={0}
+            onChange={(event) =>
+              update(
+                "kOverride",
+                event.target.value === "" ? null : Number(event.target.value),
+              )
+            }
           />
         </label>
       </div>

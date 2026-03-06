@@ -4,6 +4,8 @@ export type AngleInputMode = "fine" | "direct"
 
 export type CurveRangeMode = "apex" | "zero"
 
+export type SimulationMode = "excel" | "physics"
+
 export type PresetId = "standard-bsw" | "pip-elb-50"
 
 export interface UserInputs {
@@ -20,6 +22,14 @@ export interface AdvancedSettings {
   rho: number
   dt: number
   maxTimeSec: number
+  kOverride?: number | null
+  simulationMode?: SimulationMode
+}
+
+export interface WindOptions {
+  enabled: boolean
+  windSpeedMps: number
+  windDirectionDeg: number
 }
 
 export interface DerivedValues {
@@ -33,8 +43,10 @@ export interface TrajectoryPoint {
   timeSec: number
   xM: number
   yM: number
+  zM: number
   vxMs: number
   vyMs: number
+  vzMs: number
 }
 
 export interface BallisticsResult {
