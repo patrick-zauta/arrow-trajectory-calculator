@@ -66,6 +66,22 @@ body {
   color: var(--muted);
 }
 
+.hero-meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.hero-meta span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg-card) 86%, transparent);
+}
+
 .layout-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -79,6 +95,7 @@ body {
   border-radius: 0.9rem;
   padding: 1rem;
   box-shadow: 0 3px 16px rgba(16, 24, 40, 0.08);
+  backdrop-filter: blur(2px);
 }
 
 .card h2,
@@ -192,6 +209,32 @@ button.active {
   min-height: 320px;
 }
 
+.chart-tooltip {
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  background: var(--bg-card);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+}
+
+.chart-hover-stats {
+  margin-top: 0.75rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 0.65rem;
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.chart-hover-stats strong {
+  color: var(--text);
+}
+
 .table-wrapper {
   overflow: auto;
 }
@@ -253,6 +296,17 @@ td {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 0.6rem;
+}
+
+.site-footer {
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.88rem;
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
 }
 
 @media (max-width: 640px) {
