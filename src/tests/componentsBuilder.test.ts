@@ -1,5 +1,5 @@
-﻿import { describe, expect, it } from "vitest"
-import { sumComponentWeight } from "../lib/componentsBuilder"
+import { describe, expect, it } from "vitest"
+import { sumComponentWeight, sumComponentWeightByCategory } from "../lib/componentsBuilder"
 import { createDefaultState, useAppStore } from "../store/useAppStore"
 
 describe("components builder", () => {
@@ -10,6 +10,21 @@ describe("components builder", () => {
     ])
 
     expect(total).toBe(25)
+  })
+
+  it("groups weights by category", () => {
+    const grouped = sumComponentWeightByCategory([
+      { id: "1", name: "A", weight_grain: 10, category: "Shaft" },
+      { id: "2", name: "B", weight_grain: 15, category: "Spitze" },
+      { id: "3", name: "C", weight_grain: 5, category: "Shaft" },
+    ])
+
+    expect(grouped).toEqual(
+      expect.arrayContaining([
+        { category: "Shaft", weight_grain: 15 },
+        { category: "Spitze", weight_grain: 15 },
+      ]),
+    )
   })
 
   it("applies total to active setup weight", () => {

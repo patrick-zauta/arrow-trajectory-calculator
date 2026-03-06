@@ -1,4 +1,5 @@
-﻿export type SpeedUnit = "fps" | "mps"
+export type SpeedUnit = "fps" | "mps"
+export type HeightDisplayUnit = "cm" | "m"
 
 export interface ArrowSetup {
   v_fps: number
@@ -48,6 +49,13 @@ export interface ArrowComponentItem {
   category: ComponentCategory
 }
 
+export interface ArrowBuild {
+  id: string
+  name: string
+  components: ArrowComponentItem[]
+  isSystem?: boolean
+}
+
 export interface AppState {
   activeSetup: ArrowSetup
   advanced: AdvancedParams
@@ -55,4 +63,7 @@ export interface AppState {
   presets: Preset[]
   activePresetId: string
   components: ArrowComponentItem[]
+  arrowBuilds: ArrowBuild[]
+  activeArrowBuildId: string
+  heightDisplayUnit: HeightDisplayUnit
 }

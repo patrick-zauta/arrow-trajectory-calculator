@@ -1,11 +1,14 @@
+import { formatHeightUnitLabel, metersToHeightUnit } from "../lib/units"
+import type { HeightDisplayUnit } from "../lib/types"
 import type { SupportPoint } from "../types/ballistics"
 
 interface SupportPointsTableProps {
   points: SupportPoint[]
+  heightUnit: HeightDisplayUnit
   onExportCsv: () => void
 }
 
-export function SupportPointsTable({ points, onExportCsv }: SupportPointsTableProps) {
+export function SupportPointsTable({ points, heightUnit, onExportCsv }: SupportPointsTableProps) {
   return (
     <section className="card">
       <div className="table-header">
@@ -21,7 +24,7 @@ export function SupportPointsTable({ points, onExportCsv }: SupportPointsTablePr
             <tr>
               <th>Ziel Distanz (m)</th>
               <th>Effektive Distanz x (m)</th>
-              <th>Hoehe (cm)</th>
+              <th>Hoehe ({formatHeightUnitLabel(heightUnit)})</th>
             </tr>
           </thead>
           <tbody>
@@ -29,7 +32,7 @@ export function SupportPointsTable({ points, onExportCsv }: SupportPointsTablePr
               <tr key={`${point.targetDistanceM}-${point.effectiveDistanceM}`}>
                 <td>{point.targetDistanceM.toFixed(2)}</td>
                 <td>{point.effectiveDistanceM.toFixed(4)}</td>
-                <td>{point.heightCm.toFixed(2)}</td>
+                <td>{metersToHeightUnit(point.heightCm / 100, heightUnit).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>

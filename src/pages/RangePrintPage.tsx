@@ -1,10 +1,13 @@
-﻿import { useMemo } from "react"
+import { useMemo } from "react"
 import type { RangeCardRow } from "../lib/rangeCard"
+import type { HeightDisplayUnit } from "../lib/types"
+import { formatHeightUnitLabel, metersToHeightUnit } from "../lib/units"
 
 interface PrintPayload {
   generatedAt: string
   rows: RangeCardRow[]
   targetHeight_cm: number
+  heightDisplayUnit: HeightDisplayUnit
 }
 
 function getPayload(): PrintPayload | null {
@@ -35,14 +38,17 @@ export function RangePrintPage() {
       {payload && (
         <section className="card">
           <h3>Range Card</h3>
-          <p>Target Hoehe: {payload.targetHeight_cm.toFixed(1)} cm | erstellt: {payload.generatedAt}</p>
+          <p>
+            Target Hoehe: {metersToHeightUnit(payload.targetHeight_cm / 100, payload.heightDisplayUnit).toFixed(1)} {formatHeightUnitLabel(payload.heightDisplayUnit)}
+            {" "} | erstellt: {payload.generatedAt}
+          </p>
           <table>
             <thead>
               <tr>
                 <th>Distanz (m)</th>
-                <th>Drop (m)</th>
-                <th>Holdover (cm)</th>
-                <th>Drift (cm)</th>
+                <th>Drop ({formatHeightUnitLabel(payload.heightDisplayUnit)})</th>
+                <th>Holdover ({formatHeightUnitLabel(payload.heightDisplayUnit)})</th>
+                <th>Drift ({formatHeightUnitLabel(payload.heightDisplayUnit)})</th>
                 <th>Solver Winkel</th>
               </tr>
             </thead>
@@ -50,9 +56,9 @@ export function RangePrintPage() {
               {payload.rows.map((row) => (
                 <tr key={row.distance_m}>
                   <td>{row.distance_m.toFixed(1)}</td>
-                  <td>{row.drop_m.toFixed(3)}</td>
-                  <td>{row.holdover_cm.toFixed(2)}</td>
-                  <td>{row.drift_cm.toFixed(2)}</td>
+                  <td>{metersToHeightUnit(row.drop_m, payload.heightDisplayUnit).toFixed(3)}</td>
+                  <td>{metersToHeightUnit(row.holdover_cm / 100, payload.heightDisplayUnit).toFixed(2)}</td>
+                  <td>{metersToHeightUnit(row.drift_cm / 100, payload.heightDisplayUnit).toFixed(2)}</td>
                   <td>{row.solvedAngle_deg === null ? "-" : `${row.solvedAngle_deg.toFixed(2)}°`}</td>
                 </tr>
               ))}

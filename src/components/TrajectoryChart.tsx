@@ -1,6 +1,6 @@
 import {
-  DotProps,
   CartesianGrid,
+  DotProps,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -9,6 +9,8 @@ import {
   YAxis,
 } from "recharts"
 import { useMemo, useState } from "react"
+import { formatHeightUnitLabel, metersToHeightUnit } from "../lib/units"
+import type { HeightDisplayUnit } from "../lib/types"
 import type { CurveRangeMode } from "../types/ballistics"
 
 export interface TrajectoryChartPoint {
@@ -24,6 +26,7 @@ export interface TrajectoryChartPoint {
 interface TrajectoryChartProps {
   data: TrajectoryChartPoint[]
   rangeMode: CurveRangeMode
+  heightUnit: HeightDisplayUnit
   onToggleRange: () => void
 }
 
@@ -47,9 +50,11 @@ function formatValue(value: number, digits = 2): string {
 function TrajectoryTooltip({
   active,
   payload,
+  heightUnit,
 }: {
   active?: boolean
   payload?: RechartsTooltipPayload[]
+  heightUnit: HeightDisplayUnit
 }) {
   const point = payload?.[0]?.payload
 
@@ -61,7 +66,7 @@ function TrajectoryTooltip({
     <div className="chart-tooltip">
       <strong>Punktdaten</strong>
       <div>Distanz: {formatValue(point.xM, 2)} m</div>
-      <div>Hoehe: {formatValue(point.yM, 2)} m</div>
+      <div>Hoehe: {formatValue(metersToHeightUnit(point.yM, heightUnit), 2)} {formatHeightUnitLabel(heightUnit)}</div>
       <div>Zeit: {formatValue(point.timeSec, 3)} s</div>
       <div>Geschwindigkeit: {formatValue(point.speedMs, 2)} m/s</div>
       <div>vx: {formatValue(point.vxMs, 2)} m/s</div>
@@ -99,7 +104,7 @@ function ActiveVectorDot(props: DotProps & { payload?: TrajectoryChartPoint }) {
   )
 }
 
-export function TrajectoryChart({ data, rangeMode, onToggleRange }: TrajectoryChartProps) {
+export function TrajectoryChart({ data, rangeMode, heightUnit, onToggleRange }: TrajectoryChartProps) {
   const [hoveredPoint, setHoveredPoint] = useState<TrajectoryChartPoint | null>(null)
 
   const buttonLabel =
@@ -168,10 +173,10 @@ export function TrajectoryChart({ data, rangeMode, onToggleRange }: TrajectoryCh
               dataKey="yM"
               type="number"
               domain={[0, yMaxDomain]}
-              label={{ value: "Hoehe (m)", angle: -90, position: "insideLeft" }}
-              tickFormatter={(value) => Number(value).toFixed(1)}
+              label={{ value: `Hoehe (${formatHeightUnitLabel(heightUnit)})`, angle: -90, position: "insideLeft" }}
+              tickFormatter={(value) => metersToHeightUnit(Number(value), heightUnit).toFixed(1)}
             />
-            <Tooltip content={<TrajectoryTooltip />} />
+            <Tooltip content={<TrajectoryTooltip heightUnit={heightUnit} />} />
             <Line
               type="monotone"
               dataKey="yM"
@@ -190,7 +195,7 @@ export function TrajectoryChart({ data, rangeMode, onToggleRange }: TrajectoryCh
           <>
             <strong>Aktiver Punkt</strong>
             <span>x: {formatValue(hoveredPoint.xM, 2)} m</span>
-            <span>y: {formatValue(hoveredPoint.yM, 2)} m</span>
+            <span>y: {formatValue(metersToHeightUnit(hoveredPoint.yM, heightUnit), 2)} {formatHeightUnitLabel(heightUnit)}</span>
             <span>v: {formatValue(hoveredPoint.speedMs, 2)} m/s</span>
             <span>KE: {formatValue(hoveredPoint.kineticEnergyJ, 2)} J</span>
           </>

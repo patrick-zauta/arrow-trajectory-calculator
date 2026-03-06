@@ -1,8 +1,9 @@
-﻿import { useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { calculateHoldover, recommendPin, solveAngleForTarget, type AimMode } from "../lib/aim"
 import { generateRangeCardRows } from "../lib/rangeCard"
 import { useDebouncedValue } from "../hooks/useDebouncedValue"
+import { formatHeightUnitLabel, metersToHeightUnit } from "../lib/units"
 import { useAppStore } from "../store/useAppStore"
 
 function parseDistanceList(value: string): number[] {
@@ -18,7 +19,9 @@ export function AimPage() {
   const setup = useAppStore((state) => state.activeSetup)
   const advanced = useAppStore((state) => state.advanced)
   const wind = useAppStore((state) => state.wind)
+  const heightDisplayUnit = useAppStore((state) => state.heightDisplayUnit)
   const updateSetup = useAppStore((state) => state.updateSetup)
+  const setHeightDisplayUnit = useAppStore((state) => state.setHeightDisplayUnit)
 
   const [targetDistance_m, setTargetDistance] = useState(30)
   const [targetHeight_cm, setTargetHeight] = useState(0)
@@ -70,6 +73,7 @@ export function AimPage() {
       generatedAt: new Date().toISOString(),
       rows: rangeRows,
       targetHeight_cm,
+      heightDisplayUnit,
     }
 
     localStorage.setItem("range-print-payload", JSON.stringify(payload))
@@ -81,6 +85,22 @@ export function AimPage() {
       <header className="hero">
         <h2>Zielhilfe Rechner</h2>
         <p>Holdover, Winkel-Solver und Range Card fuer den aktuellen Active Setup.</p>
+        <div className="unit-switch">
+          <button
+            type="button"
+            className={heightDisplayUnit === "cm" ? "active" : ""}
+            onClick={() => setHeightDisplayUnit("cm")}
+          >
+            Ausgabe in cm
+          </button>
+          <button
+            type="button"
+            className={heightDisplayUnit === "m" ? "active" : ""}
+            onClick={() => setHeightDisplayUnit("m")}
+          >
+            Ausgabe in m
+          </button>
+        </div>
       </header>
 
       <section className="card">
@@ -105,14 +125,14 @@ export function AimPage() {
         <div className="result-grid">
           <article className="card">
             <h3>Holdover</h3>
-            <p>{holdover.holdover_cm.toFixed(2)} cm</p>
-            <small>y bei Distanz: {holdover.yAtTarget_m.toFixed(3)} m</small>
+            <p>{metersToHeightUnit(holdover.holdover_cm / 100, heightDisplayUnit).toFixed(2)} {formatHeightUnitLabel(heightDisplayUnit)}</p>
+            <small>y bei Distanz: {metersToHeightUnit(holdover.yAtTarget_m, heightDisplayUnit).toFixed(3)} {formatHeightUnitLabel(heightDisplayUnit)}</small>
           </article>
 
           <article className="card">
             <h3>Winkel Solver</h3>
             <p>{solverResult.angle_deg.toFixed(3)}°</p>
-            <small>Error: {(solverResult.error_m * 100).toFixed(2)} cm</small>
+            <small>Error: {metersToHeightUnit(solverResult.error_m, heightDisplayUnit).toFixed(2)} {formatHeightUnitLabel(heightDisplayUnit)}</small>
             <div className="inline-actions">
               <button type="button" onClick={() => updateSetup({ angle_deg: solverResult.angle_deg })}>
                 Winkel uebernehmen
@@ -129,7 +149,8 @@ export function AimPage() {
             </label>
             {pinRecommendation ? (
               <p>
-                Pin {pinRecommendation.pinDistance_m.toFixed(1)} m, Rest-Holdover {pinRecommendation.residualHoldover_cm.toFixed(2)} cm
+                Pin {pinRecommendation.pinDistance_m.toFixed(1)} m, Rest-Holdover{" "}
+                {metersToHeightUnit(pinRecommendation.residualHoldover_cm / 100, heightDisplayUnit).toFixed(2)} {formatHeightUnitLabel(heightDisplayUnit)}
               </p>
             ) : (
               <p>Keine Pins definiert.</p>
@@ -146,7 +167,9 @@ export function AimPage() {
           <circle cx="90" cy="90" r="8" fill="currentColor" />
           <line x1="90" y1="90" x2="250" y2={Math.max(20, Math.min(160, 90 - holdover.holdover_cm))} stroke="#22d3ee" strokeWidth="3" />
           <circle cx="250" cy={Math.max(20, Math.min(160, 90 - holdover.holdover_cm))} r="7" fill="#22d3ee" />
-          <text x="180" y="20">Marker Holdover {holdover.holdover_cm.toFixed(1)} cm</text>
+          <text x="180" y="20">
+            Marker Holdover {metersToHeightUnit(holdover.holdover_cm / 100, heightDisplayUnit).toFixed(1)} {formatHeightUnitLabel(heightDisplayUnit)}
+          </text>
         </svg>
       </section>
 
@@ -168,9 +191,9 @@ export function AimPage() {
             <thead>
               <tr>
                 <th>Distanz (m)</th>
-                <th>Drop (m)</th>
-                <th>Holdover (cm)</th>
-                <th>Drift (cm)</th>
+                <th>Drop ({formatHeightUnitLabel(heightDisplayUnit)})</th>
+                <th>Holdover ({formatHeightUnitLabel(heightDisplayUnit)})</th>
+                <th>Drift ({formatHeightUnitLabel(heightDisplayUnit)})</th>
                 <th>Solver Winkel</th>
               </tr>
             </thead>
@@ -178,9 +201,9 @@ export function AimPage() {
               {rangeRows.map((row) => (
                 <tr key={row.distance_m}>
                   <td>{row.distance_m.toFixed(1)}</td>
-                  <td>{row.drop_m.toFixed(3)}</td>
-                  <td>{row.holdover_cm.toFixed(2)}</td>
-                  <td>{row.drift_cm.toFixed(2)}</td>
+                  <td>{metersToHeightUnit(row.drop_m, heightDisplayUnit).toFixed(3)}</td>
+                  <td>{metersToHeightUnit(row.holdover_cm / 100, heightDisplayUnit).toFixed(2)}</td>
+                  <td>{metersToHeightUnit(row.drift_cm / 100, heightDisplayUnit).toFixed(2)}</td>
                   <td>{row.solvedAngle_deg === null ? "-" : `${row.solvedAngle_deg.toFixed(2)}°`}</td>
                 </tr>
               ))}

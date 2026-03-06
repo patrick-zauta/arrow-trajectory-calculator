@@ -19,6 +19,8 @@ export function AppShell() {
 
   const setup = useAppStore((state) => state.activeSetup)
   const advanced = useAppStore((state) => state.advanced)
+  const arrowBuilds = useAppStore((state) => state.arrowBuilds)
+  const activeArrowBuildId = useAppStore((state) => state.activeArrowBuildId)
   const updateSetup = useAppStore((state) => state.updateSetup)
   const updateAdvanced = useAppStore((state) => state.updateAdvanced)
 
@@ -26,6 +28,10 @@ export function AppShell() {
     () =>
       `v ${setup.v_fps.toFixed(1)} fps | d ${setup.d_mm.toFixed(2)} mm | m ${setup.m_grain.toFixed(1)} grain | a ${setup.angle_deg.toFixed(2)}°`,
     [setup],
+  )
+  const arrowBuildName = useMemo(
+    () => arrowBuilds.find((build) => build.id === activeArrowBuildId)?.name ?? "Kein Pfeilprofil",
+    [activeArrowBuildId, arrowBuilds],
   )
 
   useEffect(() => {
@@ -53,7 +59,11 @@ export function AppShell() {
     <div className="shell">
       <header className="topbar card">
         <div className="topbar-head">
-          <h1>Arrow Trajectory Calculator</h1>
+          <div className="brand-block">
+            <span className="brand-kicker">Ballistics Suite</span>
+            <h1>Arrow Trajectory Calculator</h1>
+            <p>Praezise Trajektorien, Zielhilfe und Setup-Vergleich in einer statischen Web App.</p>
+          </div>
           <button
             type="button"
             className="tabs-menu-btn"
@@ -79,13 +89,22 @@ export function AppShell() {
         </nav>
 
         <div className="setup-summary" aria-live="polite">
-          <span>{summary}</span>
+          <span>{summary} | Pfeil: {arrowBuildName}</span>
           <button type="button" onClick={() => navigate("/flight")}>Zur Flugparabel</button>
+        </div>
+        <div className="setup-summary muted-note">
+          <span>Idee von Guido Zauta | Umsetzung von Patrick Zauta</span>
         </div>
         {toast && <div className="toast">{toast}</div>}
       </header>
 
       <Outlet />
+
+      <footer className="site-footer">
+        <span>Idee von Guido Zauta</span>
+        <span>Umsetzung von Patrick Zauta</span>
+        <span>Copyright by Zauta</span>
+      </footer>
     </div>
   )
 }

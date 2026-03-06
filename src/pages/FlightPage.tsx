@@ -1,4 +1,15 @@
-﻿import { useMemo, useState } from "react"
+import { useMemo, useState } from "react"
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
 import { AngleControl } from "../components/AngleControl"
 import { ArrowInputs } from "../components/ArrowInputs"
 import { AdvancedSettingsPanel } from "../components/AdvancedSettingsPanel"
@@ -7,14 +18,21 @@ import { SupportPointsTable } from "../components/SupportPointsTable"
 import { TrajectoryChart } from "../components/TrajectoryChart"
 import type { TrajectoryChartPoint } from "../components/TrajectoryChart"
 import { useDebouncedValue } from "../hooks/useDebouncedValue"
-import { findApproxPointAtDistance, buildSupportPoints, filterCurvePoints, simulateBallistics } from "../lib/ballistics"
-import { calibrateFromMeasurement, type CalibrationTarget } from "../lib/calibration"
+import { buildSupportPoints, filterCurvePoints, findApproxPointAtDistance, simulateBallistics } from "../lib/ballistics"
+import { calibrateFromMeasurement, type CalibrationResult, type CalibrationTarget } from "../lib/calibration"
 import { supportPointsToCsv } from "../lib/csv"
-import { fpsToMps, mpsToFps } from "../lib/units"
+import type { AdvancedParams, HeightDisplayUnit, Preset } from "../lib/types"
+import { formatHeightUnitLabel, fpsToMps, metersToHeightUnit, mpsToFps } from "../lib/units"
 import { validateInputs } from "../lib/validation"
 import { toAdvancedSettings, toUserInputs, toWindOptions } from "../lib/simulationAdapters"
 import type { AngleInputMode, CurveRangeMode, SpeedUnit } from "../types/ballistics"
 import { useAppStore } from "../store/useAppStore"
+
+interface CalibrationPreview {
+  result: CalibrationResult
+  calibratedAdvanced: AdvancedParams
+  chartData: Array<{ xM: number; beforeY: number; afterY: number; targetY: number }>
+}
 
 function triggerCsvDownload(filename: string, content: string) {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8" })
@@ -52,18 +70,100 @@ function getSpeedRangeForUnit(unit: SpeedUnit): { min: number; max: number } {
   }
 }
 
+function buildCalibrationChartData(
+  beforePoints: TrajectoryChartPoint[],
+  afterPoints: TrajectoryChartPoint[],
+  targetY_m: number,
+  targetDistance_m: number,
+): Array<{ xM: number; beforeY: number; afterY: number; targetY: number }> {
+  const maxDistance = Math.max(
+    targetDistance_m * 1.2,
+    beforePoints[beforePoints.length - 1]?.xM ?? 0,
+    afterPoints[afterPoints.length - 1]?.xM ?? 0,
+  )
+  const steps = Math.max(40, Math.min(160, Math.ceil(maxDistance / 1.5)))
+  const rows: Array<{ xM: number; beforeY: number; afterY: number; targetY: number }> = []
+
+  for (let index = 0; index <= steps; index += 1) {
+    const xM = (maxDistance / steps) * index
+    rows.push({
+      xM,
+      beforeY: findApproxPointAtDistance(
+        beforePoints.map((point) => ({
+          timeSec: point.timeSec,
+          xM: point.xM,
+          yM: point.yM,
+          zM: 0,
+          vxMs: point.vxMs,
+          vyMs: point.vyMs,
+          vzMs: 0,
+        })),
+        xM,
+      ).yM,
+      afterY: findApproxPointAtDistance(
+        afterPoints.map((point) => ({
+          timeSec: point.timeSec,
+          xM: point.xM,
+          yM: point.yM,
+          zM: 0,
+          vxMs: point.vxMs,
+          vyMs: point.vyMs,
+          vzMs: 0,
+        })),
+        xM,
+      ).yM,
+      targetY: targetY_m,
+    })
+  }
+
+  return rows
+}
+
+function toChartPoints(points: Array<{
+  xM: number
+  yM: number
+  timeSec: number
+  vxMs: number
+  vyMs: number
+  vzMs: number
+}>, massKg: number): TrajectoryChartPoint[] {
+  return points.map((point) => {
+    const speedMs = Math.sqrt(point.vxMs * point.vxMs + point.vyMs * point.vyMs + point.vzMs * point.vzMs)
+
+    return {
+      xM: point.xM,
+      yM: Math.max(0, point.yM),
+      timeSec: point.timeSec,
+      vxMs: point.vxMs,
+      vyMs: point.vyMs,
+      speedMs,
+      kineticEnergyJ: 0.5 * massKg * speedMs * speedMs,
+    }
+  })
+}
+
+function formatVerticalValue(valueM: number, unit: HeightDisplayUnit): string {
+  return `${metersToHeightUnit(valueM, unit).toFixed(2)} ${formatHeightUnitLabel(unit)}`
+}
+
 export function FlightPage() {
   const setup = useAppStore((state) => state.activeSetup)
   const advanced = useAppStore((state) => state.advanced)
   const wind = useAppStore((state) => state.wind)
   const presets = useAppStore((state) => state.presets)
   const activePresetId = useAppStore((state) => state.activePresetId)
+  const arrowBuilds = useAppStore((state) => state.arrowBuilds)
+  const activeArrowBuildId = useAppStore((state) => state.activeArrowBuildId)
+  const heightDisplayUnit = useAppStore((state) => state.heightDisplayUnit)
 
   const updateSetup = useAppStore((state) => state.updateSetup)
   const updateAdvanced = useAppStore((state) => state.updateAdvanced)
   const updateWind = useAppStore((state) => state.updateWind)
   const applyPreset = useAppStore((state) => state.applyPreset)
   const saveCurrentAsPreset = useAppStore((state) => state.saveCurrentAsPreset)
+  const upsertPreset = useAppStore((state) => state.upsertPreset)
+  const applyArrowBuild = useAppStore((state) => state.applyArrowBuild)
+  const setHeightDisplayUnit = useAppStore((state) => state.setHeightDisplayUnit)
 
   const [speedUnit, setSpeedUnit] = useState<SpeedUnit>("fps")
   const [angleMode, setAngleMode] = useState<AngleInputMode>("direct")
@@ -77,6 +177,7 @@ export function FlightPage() {
   const [calTarget, setCalTarget] = useState<CalibrationTarget>("cw")
   const [calSignMode, setCalSignMode] = useState<"auto-negative" | "manual">("auto-negative")
   const [calManualSign, setCalManualSign] = useState<1 | -1>(-1)
+  const [calibrationPreview, setCalibrationPreview] = useState<CalibrationPreview | null>(null)
 
   const debouncedState = useDebouncedValue({ setup, advanced, wind }, 150)
 
@@ -96,6 +197,18 @@ export function FlightPage() {
       toWindOptions(debouncedState.wind),
     )
   }, [debouncedState, validation.errors.length])
+
+  const calmSimulation = useMemo(() => {
+    if (validation.errors.length > 0) {
+      return null
+    }
+
+    return simulateBallistics(
+      toUserInputs(debouncedState.setup),
+      toAdvancedSettings(debouncedState.advanced),
+      { enabled: false, windSpeedMps: 0, windDirectionDeg: 90 },
+    )
+  }, [debouncedState.advanced, debouncedState.setup, validation.errors.length])
 
   const visibleEndDistanceM = useMemo(() => {
     if (!simulation) {
@@ -120,21 +233,7 @@ export function FlightPage() {
 
   const chartSeries = useMemo<TrajectoryChartPoint[]>(() => {
     const massKg = simulation?.derived.massKg ?? 0
-
-    return pointsForChart.map((point) => {
-      const speedMs = Math.sqrt(point.vxMs * point.vxMs + point.vyMs * point.vyMs + point.vzMs * point.vzMs)
-      const kineticEnergyJ = 0.5 * massKg * speedMs * speedMs
-
-      return {
-        xM: point.xM,
-        yM: Math.max(0, point.yM),
-        timeSec: point.timeSec,
-        vxMs: point.vxMs,
-        vyMs: point.vyMs,
-        speedMs,
-        kineticEnergyJ,
-      }
-    })
+    return toChartPoints(pointsForChart, massKg)
   }, [pointsForChart, simulation?.derived.massKg])
 
   const supportPoints = useMemo(() => {
@@ -154,6 +253,23 @@ export function FlightPage() {
     return point.zM * 100
   }, [driftDistanceM, simulation])
 
+  const driftSeries = useMemo(
+    () =>
+      pointsForChart.map((point) => ({
+        xM: point.xM,
+        zM: point.zM,
+      })),
+    [pointsForChart],
+  )
+
+  const rangeDeltaM = useMemo(() => {
+    if (!simulation || !calmSimulation) {
+      return 0
+    }
+
+    return simulation.nullDistanceM - calmSimulation.nullDistanceM
+  }, [calmSimulation, simulation])
+
   const setSpeedValue = (value: number) => {
     const nextFps = speedUnit === "fps" ? value : mpsToFps(value)
     updateSetup({ v_fps: Math.max(20, Math.min(1200, nextFps)) })
@@ -162,7 +278,11 @@ export function FlightPage() {
   const speedDisplayValue = speedUnit === "fps" ? setup.v_fps : fpsToMps(setup.v_fps)
   const speedRange = getSpeedRangeForUnit(speedUnit)
 
-  const handleCalibrate = () => {
+  const runCalibration = () => {
+    if (!simulation) {
+      return
+    }
+
     const result = calibrateFromMeasurement({
       setup,
       advanced,
@@ -177,15 +297,62 @@ export function FlightPage() {
       maxIter: 50,
     })
 
-    if (calTarget === "cw") {
-      updateAdvanced({ cw: result.calibratedValue, k_override: null })
-    } else {
-      updateAdvanced({ k_override: result.calibratedValue })
+    const calibratedAdvanced: AdvancedParams =
+      calTarget === "cw"
+        ? { ...advanced, cw: result.calibratedValue, k_override: null }
+        : { ...advanced, k_override: result.calibratedValue }
+
+    const calibratedSimulation = simulateBallistics(
+      toUserInputs(setup),
+      toAdvancedSettings(calibratedAdvanced),
+      toWindOptions(wind),
+    )
+
+    const beforePoints = toChartPoints(
+      filterCurvePoints(simulation.points, Math.max(calDistanceM * 1.2, simulation.nullDistanceM)),
+      simulation.derived.massKg,
+    )
+    const afterPoints = toChartPoints(
+      filterCurvePoints(calibratedSimulation.points, Math.max(calDistanceM * 1.2, calibratedSimulation.nullDistanceM)),
+      calibratedSimulation.derived.massKg,
+    )
+
+    setCalibrationPreview({
+      result,
+      calibratedAdvanced,
+      chartData: buildCalibrationChartData(beforePoints, afterPoints, result.targetY_m, calDistanceM),
+    })
+  }
+
+  const applyCalibration = () => {
+    if (!calibrationPreview) {
+      return
     }
 
-    window.alert(
-      `Kalibriert. Vorher Fehler: ${result.errorBefore_m.toFixed(4)} m, Nachher: ${result.errorAfter_m.toFixed(4)} m`,
-    )
+    updateAdvanced(calibrationPreview.calibratedAdvanced)
+  }
+
+  const saveCalibratedPreset = () => {
+    if (!calibrationPreview) {
+      return
+    }
+
+    const name = window.prompt("Preset Name fuer kalibriertes Setup")
+    if (!name) {
+      return
+    }
+
+    const preset: Preset = {
+      id: `preset-${Date.now()}`,
+      name,
+      setup: { ...setup },
+      advanced: { ...calibrationPreview.calibratedAdvanced },
+      wind: { ...wind },
+      isSystem: false,
+    }
+
+    upsertPreset(preset)
+    window.alert("Kalibriertes Preset gespeichert")
   }
 
   const copyValues = async () => {
@@ -213,7 +380,12 @@ export function FlightPage() {
     <main className="page">
       <header className="hero">
         <h2>Flugparabel</h2>
-        <p>Hauptrechner fuer Trajektorie, Kennwerte und Drift.</p>
+        <p>Hauptrechner fuer Trajektorie, Kennwerte, Wind und Drift.</p>
+        <div className="hero-meta">
+          <span>Idee: Guido Zauta</span>
+          <span>Umsetzung: Patrick Zauta</span>
+          <span>Aktiver Pfeil: {arrowBuilds.find((build) => build.id === activeArrowBuildId)?.name ?? "Kein Profil"}</span>
+        </div>
       </header>
 
       <section className="card quick-actions">
@@ -229,6 +401,22 @@ export function FlightPage() {
         <button type="button" className={performanceMode ? "active" : ""} onClick={() => setPerformanceMode((current) => !current)}>
           Performance Mode
         </button>
+        <div className="unit-switch">
+          <button
+            type="button"
+            className={heightDisplayUnit === "cm" ? "active" : ""}
+            onClick={() => setHeightDisplayUnit("cm")}
+          >
+            Hoehe in cm
+          </button>
+          <button
+            type="button"
+            className={heightDisplayUnit === "m" ? "active" : ""}
+            onClick={() => setHeightDisplayUnit("m")}
+          >
+            Hoehe in m
+          </button>
+        </div>
       </section>
 
       <div className="layout-grid">
@@ -240,6 +428,16 @@ export function FlightPage() {
               {presets.map((preset) => (
                 <option key={preset.id} value={preset.id}>
                   {preset.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Aktiver Pfeil</span>
+            <select value={activeArrowBuildId} onChange={(event) => applyArrowBuild(event.target.value)}>
+              {arrowBuilds.map((build) => (
+                <option key={build.id} value={build.id}>
+                  {build.name}
                 </option>
               ))}
             </select>
@@ -285,7 +483,18 @@ export function FlightPage() {
       </div>
 
       <section className="card">
-        <h3>Wind und Seitenabweichung</h3>
+        <div className="table-header">
+          <div>
+            <h3>Wind und Seitenabweichung</h3>
+            <p>
+              Ruecken- und Gegenwind beeinflussen die Reichweite. Seitenwind erzeugt zusaetzlich einen lateralen Drift.
+            </p>
+          </div>
+          <div className="hero-meta">
+            <span>Reichweiten-Effekt: {rangeDeltaM >= 0 ? "+" : ""}{rangeDeltaM.toFixed(2)} m</span>
+            <span>Seitlicher Versatz: {formatVerticalValue(driftAtTargetCm / 100, heightDisplayUnit)}</span>
+          </div>
+        </div>
         <div className="inline-grid">
           <label className="field-inline">
             <input
@@ -323,7 +532,25 @@ export function FlightPage() {
             />
           </label>
         </div>
-        <p>Drift bei {driftDistanceM.toFixed(1)} m: {driftAtTargetCm.toFixed(2)} cm</p>
+        <p>
+          Drift bei {driftDistanceM.toFixed(1)} m: {formatVerticalValue(driftAtTargetCm / 100, heightDisplayUnit)}
+        </p>
+        {driftSeries.length > 1 && (
+          <div className="chart-wrapper mini-chart">
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={driftSeries} margin={{ top: 12, right: 16, left: 8, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="xM" type="number" domain={[0, "dataMax"]} tickFormatter={(value) => Number(value).toFixed(0)} />
+                <YAxis tickFormatter={(value) => metersToHeightUnit(Number(value), heightDisplayUnit).toFixed(1)} />
+                <Tooltip
+                  formatter={(value: number) => `${metersToHeightUnit(value, heightDisplayUnit).toFixed(2)} ${formatHeightUnitLabel(heightDisplayUnit)}`}
+                  labelFormatter={(value) => `Distanz ${Number(value).toFixed(2)} m`}
+                />
+                <Line type="monotone" dataKey="zM" name="Seitlicher Drift" stroke="#22d3ee" dot={false} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </section>
 
       {(validation.excelWarnings.length > 0 || dtSteps > 30000) && (
@@ -357,16 +584,19 @@ export function FlightPage() {
             nullDistanceM={simulation.nullDistanceM}
             apexDistanceM={simulation.apexDistanceM}
             apexHeightM={simulation.apexHeightM}
+            heightUnit={heightDisplayUnit}
           />
 
           <TrajectoryChart
             data={chartSeries}
             rangeMode={curveRangeMode}
+            heightUnit={heightDisplayUnit}
             onToggleRange={() => setCurveRangeMode((current) => (current === "apex" ? "zero" : "apex"))}
           />
 
           <SupportPointsTable
             points={supportPoints}
+            heightUnit={heightDisplayUnit}
             onExportCsv={() => triggerCsvDownload("flugkurve-stuetzpunkte.csv", supportPointsToCsv(supportPoints))}
           />
         </>
@@ -408,9 +638,52 @@ export function FlightPage() {
           )}
         </div>
         <div className="inline-actions">
-          <button type="button" onClick={handleCalibrate}>Kalibrieren und anwenden</button>
-          <button type="button" onClick={savePreset}>Als Preset speichern</button>
+          <button type="button" onClick={runCalibration}>Kalibrierung berechnen</button>
+          <button type="button" onClick={applyCalibration} disabled={!calibrationPreview}>Kalibrierung anwenden</button>
+          <button type="button" onClick={saveCalibratedPreset} disabled={!calibrationPreview}>Als Preset speichern</button>
         </div>
+
+        {calibrationPreview && (
+          <div className="stack">
+            <div className="result-grid">
+              <article className="card">
+                <h3>Vorher</h3>
+                <p>{calibrationPreview.result.previousValue.toFixed(5)}</p>
+                <small>Fehler: {calibrationPreview.result.errorBefore_m.toFixed(4)} m</small>
+              </article>
+              <article className="card">
+                <h3>Nachher</h3>
+                <p>{calibrationPreview.result.calibratedValue.toFixed(5)}</p>
+                <small>Fehler: {calibrationPreview.result.errorAfter_m.toFixed(4)} m</small>
+              </article>
+              <article className="card">
+                <h3>Zielwert</h3>
+                <p>{formatVerticalValue(calibrationPreview.result.targetY_m, heightDisplayUnit)}</p>
+                <small>{calibrationPreview.result.usedSignSwitch ? "Binary Search mit Vorzeichenwechsel" : "Best-Fit ohne Vorzeichenwechsel"}</small>
+              </article>
+            </div>
+            <div className="chart-wrapper mini-chart">
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={calibrationPreview.chartData} margin={{ top: 8, right: 12, left: 8, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="xM" tickFormatter={(value) => Number(value).toFixed(0)} />
+                  <YAxis tickFormatter={(value) => metersToHeightUnit(Number(value), heightDisplayUnit).toFixed(1)} />
+                  <Tooltip
+                    formatter={(value: number, name: string) =>
+                      [`${metersToHeightUnit(value, heightDisplayUnit).toFixed(2)} ${formatHeightUnitLabel(heightDisplayUnit)}`, name]
+                    }
+                    labelFormatter={(value) => `Distanz ${Number(value).toFixed(2)} m`}
+                  />
+                  <Legend />
+                  <ReferenceLine x={calDistanceM} stroke="#f59e0b" strokeDasharray="4 4" label="Messdistanz" />
+                  <Line type="monotone" dataKey="beforeY" name="Vorher" stroke="#64748b" dot={false} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="afterY" name="Nachher" stroke="#10b981" dot={false} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="targetY" name="Messziel" stroke="#f59e0b" dot={false} isAnimationActive={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
       </details>
     </main>
   )

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { useDebouncedValue } from "../hooks/useDebouncedValue"
 import { findApproxPointAtDistance, simulateBallistics } from "../lib/ballistics"
@@ -23,6 +23,32 @@ function cloneSetup(setup: ArrowSetup): ArrowSetup {
     m_grain: setup.m_grain,
     angle_deg: setup.angle_deg,
   }
+}
+
+function buildChartData(
+  simulations: Array<{
+    entry: CompareSetup
+    sim: ReturnType<typeof simulateBallistics>
+  }>,
+): Array<Record<string, number>> {
+  const maxDistance = simulations.reduce((max, current) => Math.max(max, current.sim.nullDistanceM), 0)
+  const steps = Math.max(80, Math.min(220, Math.ceil(maxDistance / 1.5)))
+  const rows: Array<Record<string, number>> = []
+
+  for (let index = 0; index <= steps; index += 1) {
+    const xM = maxDistance <= 0 ? 0 : (maxDistance / steps) * index
+    const row: Record<string, number> = { xM }
+
+    simulations.forEach(({ entry, sim }) => {
+      if (xM <= sim.points[sim.points.length - 1].xM) {
+        row[entry.id] = findApproxPointAtDistance(sim.points, xM).yM
+      }
+    })
+
+    rows.push(row)
+  }
+
+  return rows
 }
 
 export function ComparePage() {
@@ -56,26 +82,7 @@ export function ComparePage() {
     [advanced, debouncedSetups, wind],
   )
 
-  const chartData = useMemo(() => {
-    const maxLength = simulations.reduce((max, current) => Math.max(max, current.sim.points.length), 0)
-    const rows: Array<Record<string, number>> = []
-
-    for (let i = 0; i < maxLength; i += 1) {
-      const row: Record<string, number> = { xM: i }
-
-      simulations.forEach(({ entry, sim }) => {
-        const point = sim.points[i]
-        if (point) {
-          row.xM = point.xM
-          row[entry.id] = point.yM
-        }
-      })
-
-      rows.push(row)
-    }
-
-    return rows
-  }, [simulations])
+  const chartData = useMemo(() => buildChartData(simulations), [simulations])
 
   const metrics = useMemo(
     () =>
@@ -103,14 +110,39 @@ export function ComparePage() {
     }
 
     const nextIndex = setups.length
+    const nextId = String.fromCharCode(65 + nextIndex)
     setSetups((current) => [
       ...current,
       {
-        id: String.fromCharCode(65 + nextIndex),
-        name: `Setup ${String.fromCharCode(65 + nextIndex)}`,
+        id: nextId,
+        name: `Setup ${nextId}`,
         color: COLORS[nextIndex % COLORS.length],
         visible: true,
         setup: cloneSetup(preset.setup),
+      },
+    ])
+  }
+
+  const duplicateSetupA = () => {
+    if (setups.length >= 4) {
+      return
+    }
+
+    const source = setups.find((entry) => entry.id === "A")
+    if (!source) {
+      return
+    }
+
+    const nextIndex = setups.length
+    const nextId = String.fromCharCode(65 + nextIndex)
+    setSetups((current) => [
+      ...current,
+      {
+        id: nextId,
+        name: `Setup ${nextId}`,
+        color: COLORS[nextIndex % COLORS.length],
+        visible: true,
+        setup: cloneSetup(source.setup),
       },
     ])
   }
@@ -124,11 +156,14 @@ export function ComparePage() {
 
       <section className="card">
         <div className="inline-actions">
+          <button type="button" onClick={duplicateSetupA} disabled={setups.length >= 4}>
+            Setup A duplizieren
+          </button>
           <label className="field">
             <span>Setup aus Preset hinzufuegen</span>
             <select onChange={(event) => addSetupFromPreset(event.target.value)} defaultValue="">
               <option value="" disabled>
-                Preset wählen
+                Preset waehlen
               </option>
               {presets.map((preset) => (
                 <option key={preset.id} value={preset.id}>
@@ -142,7 +177,14 @@ export function ComparePage() {
         <div className="layout-grid">
           {setups.map((entry) => (
             <article className="card" key={entry.id}>
-              <h3>{entry.name}</h3>
+              <div className="table-header">
+                <h3>{entry.name}</h3>
+                {entry.id !== "A" && (
+                  <button type="button" onClick={() => setSetups((current) => current.filter((setup) => setup.id !== entry.id))}>
+                    Entfernen
+                  </button>
+                )}
+              </div>
               <label className="field-inline">
                 <input
                   type="checkbox"
@@ -230,7 +272,7 @@ export function ComparePage() {
           <ResponsiveContainer width="100%" height={320}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="xM" type="number" domain={[0, "dataMax"]} />
+              <XAxis dataKey="xM" type="number" domain={[0, "dataMax"]} tickFormatter={(value) => Number(value).toFixed(0)} />
               <YAxis />
               <Tooltip />
               <Legend />

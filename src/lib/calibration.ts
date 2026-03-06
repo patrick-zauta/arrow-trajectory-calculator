@@ -23,6 +23,9 @@ export interface CalibrationResult {
   calibratedValue: number
   errorBefore_m: number
   errorAfter_m: number
+  targetY_m: number
+  yBefore_m: number
+  yAfter_m: number
   usedSignSwitch: boolean
 }
 
@@ -119,6 +122,9 @@ export function calibrateFromMeasurement(input: CalibrationInput): CalibrationRe
     calibratedValue: bestValue,
     errorBefore_m: baselineError,
     errorAfter_m: bestError,
+    targetY_m: yTarget_m,
+    yBefore_m: yTarget_m + baselineError,
+    yAfter_m: yTarget_m + bestError,
     usedSignSwitch: signSwitch,
   }
 }

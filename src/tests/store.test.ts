@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 describe("useAppStore", () => {
   beforeEach(async () => {
@@ -9,6 +9,7 @@ describe("useAppStore", () => {
   it("initializes with defaults", async () => {
     const { useAppStore, DEFAULT_SETUP } = await import("../store/useAppStore")
     expect(useAppStore.getState().activeSetup).toEqual(DEFAULT_SETUP)
+    expect(useAppStore.getState().heightDisplayUnit).toBe("cm")
   })
 
   it("persists and loads from localStorage", async () => {
@@ -20,6 +21,9 @@ describe("useAppStore", () => {
         presets: [],
         activePresetId: "x",
         components: [],
+        arrowBuilds: [],
+        activeArrowBuildId: "custom-build",
+        heightDisplayUnit: "m",
       },
       version: 0,
     }
@@ -31,6 +35,7 @@ describe("useAppStore", () => {
 
     expect(state.activeSetup.v_fps).toBe(222)
     expect(state.activeSetup.m_grain).toBe(777)
+    expect(state.heightDisplayUnit).toBe("m")
   })
 
   it("updates only requested setup fields", async () => {
@@ -43,5 +48,29 @@ describe("useAppStore", () => {
     expect(state.activeSetup.v_fps).toBe(199)
     expect(state.activeSetup.d_mm).toBe(7.6)
     expect(state.activeSetup.m_grain).toBe(440)
+  })
+
+  it("switches display unit and persists it in state", async () => {
+    const { useAppStore, createDefaultState } = await import("../store/useAppStore")
+    useAppStore.setState(createDefaultState())
+
+    useAppStore.getState().setHeightDisplayUnit("m")
+
+    expect(useAppStore.getState().heightDisplayUnit).toBe("m")
+  })
+
+  it("saves and applies arrow builds", async () => {
+    const { useAppStore, createDefaultState } = await import("../store/useAppStore")
+    useAppStore.setState(createDefaultState())
+    useAppStore.getState().setComponents([
+      { id: "a", name: "Schaft", weight_grain: 300, category: "Shaft" },
+      { id: "b", name: "Spitze", weight_grain: 120, category: "Spitze" },
+    ])
+
+    const build = useAppStore.getState().saveCurrentComponentsAsArrowBuild("Mein Pfeil")
+    useAppStore.getState().applyArrowBuild(build.id)
+
+    expect(useAppStore.getState().activeArrowBuildId).toBe(build.id)
+    expect(useAppStore.getState().activeSetup.m_grain).toBe(420)
   })
 })

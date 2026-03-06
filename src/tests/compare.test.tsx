@@ -1,4 +1,4 @@
-﻿import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { HashRouter } from "react-router-dom"
 import { describe, expect, it } from "vitest"
 import { ComparePage } from "../pages/ComparePage"
@@ -14,5 +14,17 @@ describe("compare page", () => {
     expect(screen.getAllByText("Setup A").length).toBeGreaterThan(0)
     expect(screen.getAllByText("Setup B").length).toBeGreaterThan(0)
     expect(screen.getByRole("heading", { name: "Kennwerte" })).toBeInTheDocument()
+  })
+
+  it("duplicates setup A", () => {
+    render(
+      <HashRouter>
+        <ComparePage />
+      </HashRouter>,
+    )
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Setup A duplizieren" })[0])
+
+    expect(screen.getByText("Setup C")).toBeInTheDocument()
   })
 })

@@ -1,10 +1,14 @@
+import { formatHeightUnitLabel, metersToHeightUnit } from "../lib/units"
+import type { HeightDisplayUnit } from "../lib/types"
+
 interface MetricsCardsProps {
   nullDistanceM: number
   apexDistanceM: number
   apexHeightM: number
+  heightUnit: HeightDisplayUnit
 }
 
-export function MetricsCards({ nullDistanceM, apexDistanceM, apexHeightM }: MetricsCardsProps) {
+export function MetricsCards({ nullDistanceM, apexDistanceM, apexHeightM, heightUnit }: MetricsCardsProps) {
   return (
     <section className="card metrics-grid">
       <article>
@@ -17,7 +21,7 @@ export function MetricsCards({ nullDistanceM, apexDistanceM, apexHeightM }: Metr
       </article>
       <article>
         <h3>Hoehe Scheitelpunkt</h3>
-        <p>{apexHeightM.toFixed(4)} m</p>
+        <p>{metersToHeightUnit(apexHeightM, heightUnit).toFixed(4)} {formatHeightUnitLabel(heightUnit)}</p>
       </article>
     </section>
   )

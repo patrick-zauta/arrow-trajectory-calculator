@@ -1,15 +1,30 @@
-﻿import { create } from "zustand"
+import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import type {
   AdvancedParams,
   AppState,
+  ArrowBuild,
   ArrowComponentItem,
   ArrowSetup,
+  HeightDisplayUnit,
   Preset,
   WindParams,
 } from "../lib/types"
 
 const STORAGE_KEY = "arrow-app-state-v1"
+
+function cloneComponents(components: ArrowComponentItem[]): ArrowComponentItem[] {
+  return components.map((component) => ({ ...component }))
+}
+
+function sumWeight(components: ArrowComponentItem[]): number {
+  return components.reduce((sum, component) => sum + component.weight_grain, 0)
+}
+
+function buildArrowBuildId(name: string): string {
+  const sanitized = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")
+  return `${sanitized || "arrow-build"}-${Date.now()}`
+}
 
 export const DEFAULT_SETUP: ArrowSetup = {
   v_fps: 150,
@@ -61,10 +76,20 @@ export const SYSTEM_PRESETS: Preset[] = [
   },
 ]
 
+export const SYSTEM_ARROW_BUILDS: ArrowBuild[] = [
+  {
+    id: "default-arrow",
+    name: "Standardpfeil",
+    components: cloneComponents(DEFAULT_COMPONENTS),
+    isSystem: true,
+  },
+]
+
 export interface AppStore extends AppState {
   updateSetup: (patch: Partial<ArrowSetup>) => void
   updateAdvanced: (patch: Partial<AdvancedParams>) => void
   updateWind: (patch: Partial<WindParams>) => void
+  setHeightDisplayUnit: (unit: HeightDisplayUnit) => void
   setActivePresetId: (presetId: string) => void
   applyPreset: (presetId: string) => void
   saveCurrentAsPreset: (name: string) => Preset
@@ -73,6 +98,10 @@ export interface AppStore extends AppState {
   replacePresets: (presets: Preset[]) => void
   setComponents: (components: ArrowComponentItem[]) => void
   updateComponentWeightAsSetup: (weightGrain: number) => void
+  saveCurrentComponentsAsArrowBuild: (name: string) => ArrowBuild
+  applyArrowBuild: (buildId: string) => void
+  removeArrowBuild: (buildId: string) => void
+  upsertArrowBuild: (build: ArrowBuild) => void
   resetToPresetDefaults: () => void
 }
 
@@ -83,7 +112,10 @@ export function createDefaultState(): AppState {
     wind: { ...DEFAULT_WIND },
     presets: [...SYSTEM_PRESETS],
     activePresetId: SYSTEM_PRESETS[0].id,
-    components: [...DEFAULT_COMPONENTS],
+    components: cloneComponents(DEFAULT_COMPONENTS),
+    arrowBuilds: [...SYSTEM_ARROW_BUILDS],
+    activeArrowBuildId: SYSTEM_ARROW_BUILDS[0].id,
+    heightDisplayUnit: "cm",
   }
 }
 
@@ -122,6 +154,10 @@ export const useAppStore = create<AppStore>()(
             ...patch,
           },
         }))
+      },
+
+      setHeightDisplayUnit: (unit) => {
+        set({ heightDisplayUnit: unit })
       },
 
       setActivePresetId: (presetId) => {
@@ -182,7 +218,12 @@ export const useAppStore = create<AppStore>()(
       },
 
       setComponents: (components) => {
-        set({ components })
+        set((state) => ({
+          components,
+          arrowBuilds: state.arrowBuilds.map((build) =>
+            build.id === state.activeArrowBuildId ? { ...build, components: cloneComponents(components) } : build,
+          ),
+        }))
       },
 
       updateComponentWeightAsSetup: (weightGrain) => {
@@ -191,6 +232,67 @@ export const useAppStore = create<AppStore>()(
             ...state.activeSetup,
             m_grain: weightGrain,
           },
+        }))
+      },
+
+      saveCurrentComponentsAsArrowBuild: (name) => {
+        const state = get()
+        const build: ArrowBuild = {
+          id: buildArrowBuildId(name),
+          name,
+          components: cloneComponents(state.components),
+          isSystem: false,
+        }
+
+        set((current) => ({
+          arrowBuilds: [...current.arrowBuilds.filter((entry) => entry.id !== build.id), build],
+          activeArrowBuildId: build.id,
+        }))
+
+        return build
+      },
+
+      applyArrowBuild: (buildId) => {
+        const build = get().arrowBuilds.find((entry) => entry.id === buildId)
+        if (!build) {
+          return
+        }
+
+        const components = cloneComponents(build.components)
+        set((state) => ({
+          activeArrowBuildId: buildId,
+          components,
+          activeSetup: {
+            ...state.activeSetup,
+            m_grain: sumWeight(components),
+          },
+        }))
+      },
+
+      removeArrowBuild: (buildId) => {
+        set((state) => {
+          const remaining = state.arrowBuilds.filter((build) => build.id !== buildId || build.isSystem)
+          const nextActiveId =
+            state.activeArrowBuildId === buildId ? (remaining[0]?.id ?? SYSTEM_ARROW_BUILDS[0].id) : state.activeArrowBuildId
+          const nextActiveBuild =
+            remaining.find((build) => build.id === nextActiveId) ?? SYSTEM_ARROW_BUILDS[0]
+          const nextComponents = cloneComponents(nextActiveBuild.components)
+
+          return {
+            arrowBuilds: remaining,
+            activeArrowBuildId: nextActiveId,
+            components: nextComponents,
+            activeSetup: {
+              ...state.activeSetup,
+              m_grain: sumWeight(nextComponents),
+            },
+          }
+        })
+      },
+
+      upsertArrowBuild: (build) => {
+        set((state) => ({
+          arrowBuilds: [...state.arrowBuilds.filter((entry) => entry.id !== build.id), build],
         }))
       },
 
@@ -208,6 +310,9 @@ export const useAppStore = create<AppStore>()(
         presets: state.presets,
         activePresetId: state.activePresetId,
         components: state.components,
+        arrowBuilds: state.arrowBuilds,
+        activeArrowBuildId: state.activeArrowBuildId,
+        heightDisplayUnit: state.heightDisplayUnit,
       }),
     },
   ),
