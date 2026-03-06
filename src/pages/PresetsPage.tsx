@@ -1,7 +1,7 @@
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
 import { useMemo, useState } from "react"
 import { InfoHint } from "../components/InfoHint"
-import { buildDefaultComponent, sumComponentWeight, sumComponentWeightByCategory } from "../lib/componentsBuilder"
+import { buildDefaultComponent, computeFoc, sumComponentWeight, sumComponentWeightByCategory } from "../lib/componentsBuilder"
 import { buildPresetExport, parsePresetImport } from "../lib/presetIO"
 import { decodeShareParams, encodeShareParams } from "../lib/share"
 import type { ArrowComponentItem, Preset } from "../lib/types"
@@ -42,6 +42,7 @@ export function PresetsPage() {
   const advanced = useAppStore((state) => state.advanced)
   const presets = useAppStore((state) => state.presets)
   const components = useAppStore((state) => state.components)
+  const componentLibrary = useAppStore((state) => state.componentLibrary)
   const arrowBuilds = useAppStore((state) => state.arrowBuilds)
   const activeArrowBuildId = useAppStore((state) => state.activeArrowBuildId)
 
@@ -56,15 +57,23 @@ export function PresetsPage() {
   const saveCurrentComponentsAsArrowBuild = useAppStore((state) => state.saveCurrentComponentsAsArrowBuild)
   const applyArrowBuild = useAppStore((state) => state.applyArrowBuild)
   const removeArrowBuild = useAppStore((state) => state.removeArrowBuild)
+  const addComponentFromTemplate = useAppStore((state) => state.addComponentFromTemplate)
+  const addTemplateFromComponent = useAppStore((state) => state.addTemplateFromComponent)
+  const updateArrowBuildMeta = useAppStore((state) => state.updateArrowBuildMeta)
 
   const [importDialog, setImportDialog] = useState<ImportDialogState | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
+  const [selectedTemplateId, setSelectedTemplateId] = useState(componentLibrary[0]?.id ?? "")
 
   const totalWeight = useMemo(() => sumComponentWeight(components), [components])
   const componentBreakdown = useMemo(() => sumComponentWeightByCategory(components), [components])
   const activeArrowBuild = useMemo(
     () => arrowBuilds.find((build) => build.id === activeArrowBuildId) ?? null,
     [activeArrowBuildId, arrowBuilds],
+  )
+  const foc = useMemo(
+    () => computeFoc(activeArrowBuild ?? { id: "temp", name: "temp", components, arrowLength_mm: 760 }),
+    [activeArrowBuild, components],
   )
 
   const exportPresets = () => {
@@ -83,7 +92,6 @@ export function PresetsPage() {
       const text = await file.text()
       const imported = parsePresetImport(text)
       const existingIds = new Set(presets.map((preset) => preset.id))
-
       setImportError(null)
       setImportDialog({
         fileName: file.name,
@@ -101,7 +109,6 @@ export function PresetsPage() {
     if (!importDialog) {
       return
     }
-
     replacePresets(mergeImportedPresets(presets, importDialog.imported, importDialog.mergeMode))
     setImportDialog(null)
   }
@@ -136,18 +143,14 @@ export function PresetsPage() {
     if (!name) {
       return
     }
-
     saveCurrentComponentsAsArrowBuild(name)
   }
 
   return (
     <main className="page">
       <header className="hero">
-        <h2>
-          Preset Manager{" "}
-          <InfoHint text="Verwaltet Presets, Arrow-Builder-Profile, Komponentenlisten und Share/Import-Funktionen zentral fuer die gesamte App." />
-        </h2>
-        <p>Presets verwalten, Pfeile konfigurieren, importieren, exportieren und teilen.</p>
+        <h2>Preset Manager</h2>
+        <p>Presets, Arrow Builder, FOC, Materialbibliothek und Sharing an einem Ort.</p>
         <div className="hero-meta">
           <span>Aktiver Pfeil: {activeArrowBuild?.name ?? "Kein Pfeil"}</span>
           <span>Gespeicherte Pfeile: {arrowBuilds.length}</span>
@@ -158,7 +161,7 @@ export function PresetsPage() {
       <section className="card inline-actions accent-card accent-primary">
         <button type="button" onClick={exportPresets}>Presets exportieren</button>
         <label className="field">
-          <span>Import Datei <InfoHint text="Importiert Presets aus einer JSON-Datei. Konflikte koennen ueberschrieben oder als Kopie importiert werden." /></span>
+          <span>Import Datei</span>
           <input
             type="file"
             accept="application/json"
@@ -186,56 +189,27 @@ export function PresetsPage() {
         </button>
       </section>
 
-      {importError && (
-        <section className="error">
-          <strong>Importfehler:</strong> {importError}
-        </section>
-      )}
+      {importError && <section className="error"><strong>Importfehler:</strong> {importError}</section>}
 
       {importDialog && (
         <section className="card modal-like">
           <div className="table-header">
             <div>
               <h3>Preset Import</h3>
-              <p>
-                Datei: <strong>{importDialog.fileName}</strong> mit {importDialog.imported.length} Presets.
-              </p>
+              <p>Datei: <strong>{importDialog.fileName}</strong> mit {importDialog.imported.length} Presets.</p>
             </div>
-            <button type="button" onClick={() => setImportDialog(null)}>
-              Abbrechen
-            </button>
+            <button type="button" onClick={() => setImportDialog(null)}>Abbrechen</button>
           </div>
           <div className="layout-grid compact-grid">
             <article className="card">
-              <h4>Konflikte <InfoHint text="Konflikte entstehen, wenn importierte und lokale Presets dieselbe ID verwenden." /></h4>
+              <h4>Konflikte</h4>
               <p>{importDialog.conflictIds.length} IDs existieren bereits im lokalen Bestand.</p>
-              {importDialog.conflictIds.length > 0 && (
-                <ul className="pill-list">
-                  {importDialog.conflictIds.map((id) => (
-                    <li key={id}>{id}</li>
-                  ))}
-                </ul>
-              )}
             </article>
             <article className="card">
-              <h4>Merge Strategie <InfoHint text="Overwrite ersetzt gleiche IDs. Copy legt importierte Presets als neue lokale Kopien an." /></h4>
+              <h4>Merge Strategie</h4>
               <div className="radio-row">
-                <label>
-                  <input
-                    type="radio"
-                    checked={importDialog.mergeMode === "overwrite"}
-                    onChange={() => setImportDialog((current) => (current ? { ...current, mergeMode: "overwrite" } : current))}
-                  />
-                  Gleiche ID ueberschreiben
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    checked={importDialog.mergeMode === "copy"}
-                    onChange={() => setImportDialog((current) => (current ? { ...current, mergeMode: "copy" } : current))}
-                  />
-                  Als Kopie importieren
-                </label>
+                <label><input type="radio" checked={importDialog.mergeMode === "overwrite"} onChange={() => setImportDialog((current) => (current ? { ...current, mergeMode: "overwrite" } : current))} /> Gleiche ID ueberschreiben</label>
+                <label><input type="radio" checked={importDialog.mergeMode === "copy"} onChange={() => setImportDialog((current) => (current ? { ...current, mergeMode: "copy" } : current))} /> Als Kopie importieren</label>
               </div>
             </article>
           </div>
@@ -247,25 +221,25 @@ export function PresetsPage() {
 
       <section className="dashboard-strip">
         <article className="dashboard-stat">
-          <span className="dashboard-label">Aktiver Builder</span>
-          <strong>{activeArrowBuild?.name ?? "Kein Profil"}</strong>
+          <span className="dashboard-label">FOC</span>
+          <strong>{foc.focPercent.toFixed(2)}%</strong>
         </article>
         <article className="dashboard-stat">
-          <span className="dashboard-label">Komponenten</span>
-          <strong>{components.length}</strong>
+          <span className="dashboard-label">Balance Point</span>
+          <strong>{foc.balancePointMm.toFixed(1)} mm</strong>
         </article>
         <article className="dashboard-stat">
           <span className="dashboard-label">Gesamtgewicht</span>
           <strong>{totalWeight.toFixed(2)} grain</strong>
         </article>
         <article className="dashboard-stat">
-          <span className="dashboard-label">Active Setup</span>
-          <strong>{setup.m_grain.toFixed(1)} grain</strong>
+          <span className="dashboard-label">FOC Bewertung</span>
+          <strong>{foc.rating}</strong>
         </article>
       </section>
 
       <section className="card">
-        <h3>Presets <InfoHint text="Presets speichern komplettes Setup inklusive Advanced Settings und optional Wind." /></h3>
+        <h3>Presets</h3>
         <div className="table-wrapper">
           <table>
             <thead>
@@ -300,15 +274,31 @@ export function PresetsPage() {
       <section className="card accent-card accent-cyan">
         <div className="table-header">
           <div>
-            <h3>Arrow Builder <InfoHint text="Gespeicherte Pfeile bestehen aus Komponentenlisten und koennen appweit als aktiver Pfeil verwendet werden." /></h3>
-            <p>
-              Aktiver Pfeil: <strong>{activeArrowBuild?.name ?? "Kein Pfeil"}</strong> | Gesamtgewicht {totalWeight.toFixed(2)} grain
-            </p>
+            <h3>Arrow Builder <InfoHint text="Gespeicherte Pfeile bestehen aus Komponentenlisten, Geometrie und einer daraus abgeleiteten FOC-Bewertung." /></h3>
+            <p>Aktiver Pfeil: <strong>{activeArrowBuild?.name ?? "Kein Pfeil"}</strong> | Gesamtgewicht {totalWeight.toFixed(2)} grain</p>
           </div>
           <div className="inline-actions">
             <button type="button" onClick={saveArrowBuild}>Als Pfeil speichern</button>
             <button type="button" onClick={() => updateComponentWeightAsSetup(totalWeight)}>Total als Pfeilgewicht uebernehmen</button>
           </div>
+        </div>
+
+        <div className="layout-grid compact-grid">
+          <label className="field">
+            <span>Pfeillaenge (mm)</span>
+            <input
+              type="number"
+              value={activeArrowBuild?.arrowLength_mm ?? 760}
+              onChange={(event) => activeArrowBuild && updateArrowBuildMeta(activeArrowBuild.id, { arrowLength_mm: Number(event.target.value) || 760 })}
+            />
+          </label>
+          <label className="field">
+            <span>Notizen</span>
+            <input
+              value={activeArrowBuild?.notes ?? ""}
+              onChange={(event) => activeArrowBuild && updateArrowBuildMeta(activeArrowBuild.id, { notes: event.target.value })}
+            />
+          </label>
         </div>
 
         <div className="table-wrapper">
@@ -324,7 +314,6 @@ export function PresetsPage() {
             <tbody>
               {arrowBuilds.map((build) => {
                 const buildWeight = sumComponentWeight(build.components)
-
                 return (
                   <tr key={build.id}>
                     <td>{build.name}</td>
@@ -345,12 +334,26 @@ export function PresetsPage() {
       <section className="card accent-card accent-amber">
         <div className="table-header">
           <div>
-            <h3>Komponenten Builder <InfoHint text="Hier wird die Komponentenliste des aktuell aktiven Pfeils bearbeitet. Das Gesamtgewicht kann direkt ins Active Setup uebernommen werden." /></h3>
+            <h3>Komponenten Builder</h3>
             <p>Bearbeitet immer den aktuell ausgewaehlten Pfeil und macht ihn fuer alle Rechner verfuegbar.</p>
           </div>
           <div className="inline-actions">
-            <button type="button" onClick={() => setComponents([...components, buildDefaultComponent()])}>Komponente hinzufuegen</button>
+            <button type="button" onClick={() => setComponents([...components, buildDefaultComponent("comp", activeArrowBuild?.arrowLength_mm ?? 760)])}>Komponente hinzufuegen</button>
             <button type="button" onClick={() => updateComponentWeightAsSetup(totalWeight)}>Gewicht ins Active Setup</button>
+          </div>
+        </div>
+
+        <div className="layout-grid compact-grid">
+          <label className="field">
+            <span>Materialvorlage</span>
+            <select value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
+              {componentLibrary.map((template) => (
+                <option key={template.id} value={template.id}>{template.name}</option>
+              ))}
+            </select>
+          </label>
+          <div className="inline-actions">
+            <button type="button" onClick={() => selectedTemplateId && addComponentFromTemplate(selectedTemplateId)}>Vorlage hinzufuegen</button>
           </div>
         </div>
 
@@ -362,31 +365,17 @@ export function PresetsPage() {
                   <th>Name</th>
                   <th>Grain</th>
                   <th>Kategorie</th>
+                  <th>Position (mm)</th>
                   <th>Aktion</th>
                 </tr>
               </thead>
               <tbody>
                 {components.map((component) => (
                   <tr key={component.id}>
+                    <td><input value={component.name} onChange={(event) => updateComponent(component.id, { name: event.target.value })} /></td>
+                    <td><input type="number" value={component.weight_grain} onChange={(event) => updateComponent(component.id, { weight_grain: Number(event.target.value) || 0 })} /></td>
                     <td>
-                      <input value={component.name} onChange={(event) => updateComponent(component.id, { name: event.target.value })} />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        value={component.weight_grain}
-                        onChange={(event) => updateComponent(component.id, { weight_grain: Number(event.target.value) || 0 })}
-                      />
-                    </td>
-                    <td>
-                      <select
-                        value={component.category}
-                        onChange={(event) =>
-                          updateComponent(component.id, {
-                            category: event.target.value as ArrowComponentItem["category"],
-                          })
-                        }
-                      >
+                      <select value={component.category} onChange={(event) => updateComponent(component.id, { category: event.target.value as ArrowComponentItem["category"] })}>
                         <option>Shaft</option>
                         <option>Spitze</option>
                         <option>Insert</option>
@@ -396,10 +385,10 @@ export function PresetsPage() {
                         <option>Sonstiges</option>
                       </select>
                     </td>
-                    <td>
-                      <button type="button" onClick={() => setComponents(components.filter((entry) => entry.id !== component.id))}>
-                        Entfernen
-                      </button>
+                    <td><input type="number" value={component.position_mm} onChange={(event) => updateComponent(component.id, { position_mm: Number(event.target.value) || 0 })} /></td>
+                    <td className="inline-actions">
+                      <button type="button" onClick={() => addTemplateFromComponent(component)}>Als Vorlage</button>
+                      <button type="button" onClick={() => setComponents(components.filter((entry) => entry.id !== component.id))}>Entfernen</button>
                     </td>
                   </tr>
                 ))}
@@ -408,19 +397,11 @@ export function PresetsPage() {
           </div>
 
           <article className="card">
-            <h4>Gewichtsverteilung <InfoHint text="Die Verteilung nach Kategorien zeigt, wo das meiste Pfeilgewicht liegt." /></h4>
+            <h4>Gewichtsverteilung</h4>
             <div className="chart-wrapper mini-chart">
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie
-                    data={componentBreakdown}
-                    dataKey="weight_grain"
-                    nameKey="category"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={86}
-                    label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
-                  >
+                  <Pie data={componentBreakdown} dataKey="weight_grain" nameKey="category" cx="50%" cy="50%" outerRadius={86} label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}>
                     {componentBreakdown.map((entry, index) => (
                       <Cell key={entry.category} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
@@ -430,6 +411,7 @@ export function PresetsPage() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
+            <p>Balance Point {foc.balancePointMm.toFixed(1)} mm | FOC {foc.focPercent.toFixed(2)}%</p>
           </article>
         </div>
       </section>

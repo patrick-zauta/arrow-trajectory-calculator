@@ -1,18 +1,22 @@
-﻿import { NavLink, Outlet, useNavigate } from "react-router-dom"
+import { NavLink, Outlet, useNavigate } from "react-router-dom"
 import { useEffect, useMemo, useState } from "react"
 import { decodeShareParams } from "../../lib/share"
+import { t } from "../../lib/i18n"
 import { useAppStore } from "../../store/useAppStore"
 
-const tabs = [
-  { to: "/home", label: "Start" },
-  { to: "/flight", label: "Flugparabel" },
-  { to: "/aim", label: "Zielhilfe" },
-  { to: "/calibration", label: "Kalibrierung" },
-  { to: "/setup", label: "Setup Rechner" },
-  { to: "/compare", label: "Vergleich" },
-  { to: "/presets", label: "Preset Manager" },
-  { to: "/info", label: "Info" },
-]
+const tabKeys = [
+  { to: "/home", key: "start" },
+  { to: "/flight", key: "flight" },
+  { to: "/aim", key: "aim" },
+  { to: "/calibration", key: "calibration" },
+  { to: "/setup", key: "setup" },
+  { to: "/compare", key: "compare" },
+  { to: "/presets", key: "presets" },
+  { to: "/sight-tape", key: "sightTape" },
+  { to: "/analytics", key: "analytics" },
+  { to: "/journal", key: "journal" },
+  { to: "/info", key: "info" },
+] as const
 
 export function AppShell() {
   const navigate = useNavigate()
@@ -23,12 +27,13 @@ export function AppShell() {
   const advanced = useAppStore((state) => state.advanced)
   const arrowBuilds = useAppStore((state) => state.arrowBuilds)
   const activeArrowBuildId = useAppStore((state) => state.activeArrowBuildId)
+  const locale = useAppStore((state) => state.uiPreferences.locale)
   const updateSetup = useAppStore((state) => state.updateSetup)
   const updateAdvanced = useAppStore((state) => state.updateAdvanced)
+  const setLocale = useAppStore((state) => state.setLocale)
 
   const summary = useMemo(
-    () =>
-      `v ${setup.v_fps.toFixed(1)} fps | d ${setup.d_mm.toFixed(2)} mm | m ${setup.m_grain.toFixed(1)} grain | a ${setup.angle_deg.toFixed(2)}°`,
+    () => `v ${setup.v_fps.toFixed(1)} fps | d ${setup.d_mm.toFixed(2)} mm | m ${setup.m_grain.toFixed(1)} grain | a ${setup.angle_deg.toFixed(2)} deg`,
     [setup],
   )
   const arrowBuildName = useMemo(
@@ -66,36 +71,42 @@ export function AppShell() {
             <h1>Arrow Trajectory Calculator</h1>
             <p>Praezise Trajektorien, Zielhilfe und Setup-Vergleich in einer statischen Web App.</p>
           </div>
-          <button
-            type="button"
-            className="tabs-menu-btn"
-            onClick={() => setMenuOpen((current) => !current)}
-            aria-expanded={menuOpen}
-            aria-controls="app-tabs"
-          >
-            Menue
-          </button>
+          <div className="inline-actions">
+            <div className="unit-switch" role="group" aria-label="Locale switcher">
+              <button type="button" className={locale === "de" ? "active" : ""} onClick={() => setLocale("de")}>DE</button>
+              <button type="button" className={locale === "en" ? "active" : ""} onClick={() => setLocale("en")}>EN</button>
+            </div>
+            <button
+              type="button"
+              className="tabs-menu-btn"
+              onClick={() => setMenuOpen((current) => !current)}
+              aria-expanded={menuOpen}
+              aria-controls="app-tabs"
+            >
+              {t(locale, "menu")}
+            </button>
+          </div>
         </div>
 
         <nav id="app-tabs" className={`tabs ${menuOpen ? "open" : ""}`} aria-label="App Navigation">
-          {tabs.map((tab) => (
+          {tabKeys.map((tab) => (
             <NavLink
               key={tab.to}
               to={tab.to}
               className={({ isActive }) => `tab-link ${isActive ? "active" : ""}`}
               onClick={() => setMenuOpen(false)}
             >
-              {tab.label}
+              {t(locale, tab.key)}
             </NavLink>
           ))}
         </nav>
 
         <div className="setup-summary" aria-live="polite">
           <span>{summary} | Pfeil: {arrowBuildName}</span>
-          <button type="button" onClick={() => navigate("/flight")}>Zur Flugparabel</button>
+          <button type="button" onClick={() => navigate("/flight")}>{t(locale, "gotoFlight")}</button>
         </div>
         <div className="setup-summary muted-note">
-          <span>Idee von Guido Zauta | Umsetzung von Patrick Zauta</span>
+          <span>Idee von Guido Zauta | Umsetzung von Patrick Zauta | Release v0.0.1</span>
         </div>
         {toast && <div className="toast">{toast}</div>}
       </header>
