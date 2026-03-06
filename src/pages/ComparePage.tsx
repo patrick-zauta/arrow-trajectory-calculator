@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { InfoHint } from "../components/InfoHint"
 import { useDebouncedValue } from "../hooks/useDebouncedValue"
 import { findApproxPointAtDistance, simulateBallistics } from "../lib/ballistics"
 import { toAdvancedSettings, toUserInputs, toWindOptions } from "../lib/simulationAdapters"
@@ -150,7 +151,10 @@ export function ComparePage() {
   return (
     <main className="page">
       <header className="hero">
-        <h2>Vergleich</h2>
+        <h2>
+          Vergleich{" "}
+          <InfoHint text="Mehrere Setups werden parallel simuliert, im selben Diagramm ueberlagert und ueber Kennwerte vergleichbar gemacht." />
+        </h2>
         <p>Vergleich von zwei bis vier Setups mit Overlay Chart und Kennwerten.</p>
         <div className="hero-meta">
           <span>Sichtbare Setups: {setups.filter((entry) => entry.visible).length}</span>
@@ -177,7 +181,10 @@ export function ComparePage() {
             Setup A duplizieren
           </button>
           <label className="field">
-            <span>Setup aus Preset hinzufuegen</span>
+            <span>
+              Setup aus Preset hinzufuegen{" "}
+              <InfoHint text="Fuegt ein weiteres Vergleichs-Setup auf Basis eines gespeicherten Presets hinzu." />
+            </span>
             <select onChange={(event) => addSetupFromPreset(event.target.value)} defaultValue="">
               <option value="" disabled>
                 Preset waehlen
@@ -287,7 +294,10 @@ export function ComparePage() {
       </section>
 
       <section className="card accent-card accent-cyan">
-        <h3>Chart Overlay</h3>
+        <h3>
+          Chart Overlay{" "}
+          <InfoHint text="Jede sichtbare Konfiguration wird als eigene Flugkurve mit gemeinsamer Distanzachse dargestellt." />
+        </h3>
         <div className="chart-wrapper">
           <ResponsiveContainer width="100%" height={320}>
             <LineChart data={chartData}>
@@ -305,7 +315,10 @@ export function ComparePage() {
       </section>
 
       <section className="card accent-card accent-amber">
-        <h3>Kennwerte</h3>
+        <h3>
+          Kennwerte{" "}
+          <InfoHint text="Vergleicht Nullpunkt, Scheitelpunktdistanz und Scheitelpunkthoehe aller sichtbaren Setups." />
+        </h3>
         <div className="table-wrapper">
           <table>
             <thead>
@@ -331,9 +344,15 @@ export function ComparePage() {
       </section>
 
       <section className="card">
-        <h3>Differenz Ansicht</h3>
+        <h3>
+          Differenz Ansicht{" "}
+          <InfoHint text="Zeigt Hoehenunterschiede mehrerer Setups an einer frei waehlbaren Distanz relativ zum ersten sichtbaren Setup." />
+        </h3>
         <label className="field">
-          <span>Distanz (m)</span>
+          <span>
+            Distanz (m){" "}
+            <InfoHint text="An dieser Distanz wird die relative Hoehenabweichung zwischen den Setups ausgewertet." />
+          </span>
           <input type="number" value={distanceDiff_m} onChange={(event) => setDistanceDiff(Number(event.target.value) || 0)} />
         </label>
         {baseline && (

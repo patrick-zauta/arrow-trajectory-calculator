@@ -1,4 +1,5 @@
-﻿import { useMemo, useState } from "react"
+import { useMemo, useState } from "react"
+import { InfoHint } from "../components/InfoHint"
 import { useDebouncedValue } from "../hooks/useDebouncedValue"
 import { DEFAULT_EFFICIENCY_BY_BOW, estimateArrowSpeed, type BowType } from "../lib/setupEstimator"
 import { useAppStore } from "../store/useAppStore"
@@ -47,14 +48,17 @@ export function SetupPage() {
   return (
     <main className="page">
       <header className="hero">
-        <h2>Setup Rechner</h2>
-        <p>Geschaetzte Startgeschwindigkeit aus Bogenparametern. Nur Schätzung.</p>
+        <h2>
+          Setup Rechner{" "}
+          <InfoHint text="Dieser Rechner schaetzt die Startgeschwindigkeit aus Bogenparametern. Das Ergebnis kann in das globale Active Setup uebernommen werden." />
+        </h2>
+        <p>Geschaetzte Startgeschwindigkeit aus Bogenparametern. Nur Schaetzung.</p>
       </header>
 
       <section className="card">
         <div className="layout-grid compact-grid">
           <label className="field">
-            <span>Bogentyp</span>
+            <span>Bogentyp <InfoHint text="Der Bogentyp setzt sinnvolle Standardwerte fuer den Effizienzfaktor." /></span>
             <select
               value={bowType}
               onChange={(event) => {
@@ -69,27 +73,27 @@ export function SetupPage() {
             </select>
           </label>
           <label className="field">
-            <span>Draw Weight (lbs)</span>
+            <span>Draw Weight (lbs) <InfoHint text="Zuggewicht des Bogens. Hoehere Werte erhoehen die geschaetzte Startenergie." /></span>
             <input type="number" value={drawWeight_lbs} onChange={(event) => setDrawWeight(Number(event.target.value) || 0)} />
           </label>
           <label className="field">
-            <span>Draw Length (in)</span>
+            <span>Draw Length (in) <InfoHint text="Auszug in Inch. Er wirkt sowohl im IBO-Korrekturmodell als auch im Energieansatz." /></span>
             <input type="number" value={drawLength_in} onChange={(event) => setDrawLength(Number(event.target.value) || 0)} />
           </label>
           <label className="field">
-            <span>IBO Speed (fps, optional)</span>
+            <span>IBO Speed (fps, optional) <InfoHint text="Wenn gesetzt, wird zuerst eine IBO-basierte Korrektur verwendet. Ohne IBO-Wert nutzt der Rechner den Energieansatz." /></span>
             <input value={iboSpeed_fps} onChange={(event) => setIboSpeed(event.target.value)} />
           </label>
           <label className="field">
-            <span>Effizienzfaktor</span>
+            <span>Effizienzfaktor <InfoHint text="Schaetzt, welcher Anteil der gespeicherten Bogenenergie tatsaechlich im Pfeil ankommt." /></span>
             <input type="number" value={efficiencyFactor} step={0.01} onChange={(event) => setEfficiency(Number(event.target.value) || 0)} />
           </label>
           <label className="field">
-            <span>Pfeilmasse (grain)</span>
+            <span>Pfeilmasse (grain) <InfoHint text="Standardmaessig kannst du hier das aktuelle Pfeilgewicht aus dem globalen Setup verwenden." /></span>
             <input type="number" value={arrowMass_grain} onChange={(event) => setArrowMass(Number(event.target.value) || 0)} />
           </label>
           <label className="field">
-            <span>Extra Masse (grain)</span>
+            <span>Extra Masse (grain) <InfoHint text="Zusatzgewicht fuer Inserts, Jagdspitzen oder andere Abweichungen vom Basisgewicht." /></span>
             <input type="number" value={extraMass_grain} onChange={(event) => setExtraMass(Number(event.target.value) || 0)} />
           </label>
         </div>
@@ -102,12 +106,12 @@ export function SetupPage() {
 
       <section className="result-grid">
         <article className="card">
-          <h3>Speed</h3>
+          <h3>Speed <InfoHint text="Geschaetzte Startgeschwindigkeit in fps und m/s fuer das aktuelle Setup." /></h3>
           <p>{result.speed_fps.toFixed(2)} fps</p>
           <small>{result.speed_ms.toFixed(2)} m/s</small>
         </article>
         <article className="card">
-          <h3>Energie</h3>
+          <h3>Energie <InfoHint text="Aus der geschaetzten Geschwindigkeit werden kinetische Energie und Impuls des Pfeils abgeleitet." /></h3>
           <p>{result.energy_J.toFixed(2)} J</p>
           <small>Impuls {result.impulse_Ns.toFixed(4)} Ns</small>
         </article>

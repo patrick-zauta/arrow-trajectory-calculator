@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { InfoHint } from "../components/InfoHint"
+import { useDebouncedValue } from "../hooks/useDebouncedValue"
 import { calculateHoldover, recommendPin, solveAngleForTarget, type AimMode } from "../lib/aim"
 import { generateRangeCardRows } from "../lib/rangeCard"
-import { useDebouncedValue } from "../hooks/useDebouncedValue"
 import { formatHeightUnitLabel, metersToHeightUnit } from "../lib/units"
 import { useAppStore } from "../store/useAppStore"
 
@@ -83,7 +84,10 @@ export function AimPage() {
   return (
     <main className="page">
       <header className="hero">
-        <h2>Zielhilfe Rechner</h2>
+        <h2>
+          Zielhilfe Rechner{" "}
+          <InfoHint text="Diese Seite berechnet Holdover, Solver-Winkel und Range Cards auf Basis des globalen Active Setup." />
+        </h2>
         <p>Holdover, Winkel-Solver und Range Card fuer den aktuellen Active Setup.</p>
         <div className="unit-switch">
           <button
@@ -106,15 +110,24 @@ export function AimPage() {
       <section className="card">
         <div className="layout-grid compact-grid">
           <label className="field">
-            <span>Ziel Distanz (m)</span>
+            <span>
+              Ziel Distanz (m){" "}
+              <InfoHint text="Distanz zum Zielpunkt, fuer den Holdover oder ein neuer Trefferwinkel berechnet werden soll." />
+            </span>
             <input type="number" value={targetDistance_m} onChange={(event) => setTargetDistance(Number(event.target.value) || 0)} />
           </label>
           <label className="field">
-            <span>Ziel Hoehe (cm, + hoeher)</span>
+            <span>
+              Ziel Hoehe (cm, + hoeher){" "}
+              <InfoHint text="Positive Werte liegen ueber der Startlinie, negative Werte darunter." />
+            </span>
             <input type="number" value={targetHeight_cm} onChange={(event) => setTargetHeight(Number(event.target.value) || 0)} />
           </label>
           <label className="field">
-            <span>Modus</span>
+            <span>
+              Modus{" "}
+              <InfoHint text="Holdover nutzt den aktuellen Winkel. Solver sucht einen Winkel, der den Zielpunkt moeglichst genau trifft." />
+            </span>
             <select value={mode} onChange={(event) => setMode(event.target.value as AimMode)}>
               <option value="holdover">A Holdover berechnen</option>
               <option value="solve-angle">B Winkel berechnen</option>
@@ -124,15 +137,30 @@ export function AimPage() {
 
         <div className="result-grid">
           <article className="card">
-            <h3>Holdover</h3>
-            <p>{metersToHeightUnit(holdover.holdover_cm / 100, heightDisplayUnit).toFixed(2)} {formatHeightUnitLabel(heightDisplayUnit)}</p>
-            <small>y bei Distanz: {metersToHeightUnit(holdover.yAtTarget_m, heightDisplayUnit).toFixed(3)} {formatHeightUnitLabel(heightDisplayUnit)}</small>
+            <h3>
+              Holdover{" "}
+              <InfoHint text="Differenz zwischen gewuenschter Zielhoehe und der simulierten Hoehe des Pfeils an der Zieldistanz." />
+            </h3>
+            <p>
+              {metersToHeightUnit(holdover.holdover_cm / 100, heightDisplayUnit).toFixed(2)}{" "}
+              {formatHeightUnitLabel(heightDisplayUnit)}
+            </p>
+            <small>
+              y bei Distanz: {metersToHeightUnit(holdover.yAtTarget_m, heightDisplayUnit).toFixed(3)}{" "}
+              {formatHeightUnitLabel(heightDisplayUnit)}
+            </small>
           </article>
 
           <article className="card">
-            <h3>Winkel Solver</h3>
-            <p>{solverResult.angle_deg.toFixed(3)}°</p>
-            <small>Error: {metersToHeightUnit(solverResult.error_m, heightDisplayUnit).toFixed(2)} {formatHeightUnitLabel(heightDisplayUnit)}</small>
+            <h3>
+              Winkel Solver{" "}
+              <InfoHint text="Der Solver durchsucht den Winkelbereich und liefert denjenigen Winkel mit minimalem Fehler zum Zielpunkt." />
+            </h3>
+            <p>{solverResult.angle_deg.toFixed(3)} deg</p>
+            <small>
+              Error: {metersToHeightUnit(solverResult.error_m, heightDisplayUnit).toFixed(2)}{" "}
+              {formatHeightUnitLabel(heightDisplayUnit)}
+            </small>
             <div className="inline-actions">
               <button type="button" onClick={() => updateSetup({ angle_deg: solverResult.angle_deg })}>
                 Winkel uebernehmen
@@ -142,15 +170,22 @@ export function AimPage() {
           </article>
 
           <article className="card">
-            <h3>Pin Empfehlung</h3>
+            <h3>
+              Pin Empfehlung{" "}
+              <InfoHint text="Bestimmt aus einer Liste von Pins den naechstpassenden Pin plus verbleibenden Rest-Holdover." />
+            </h3>
             <label className="field">
-              <span>Pins (m, comma separated)</span>
+              <span>
+                Pins (m, comma separated){" "}
+                <InfoHint text="Kommagetrennte Distanzliste der verfuegbaren Pins, zum Beispiel 20,30,40." />
+              </span>
               <input value={pinInput} onChange={(event) => setPinInput(event.target.value)} />
             </label>
             {pinRecommendation ? (
               <p>
                 Pin {pinRecommendation.pinDistance_m.toFixed(1)} m, Rest-Holdover{" "}
-                {metersToHeightUnit(pinRecommendation.residualHoldover_cm / 100, heightDisplayUnit).toFixed(2)} {formatHeightUnitLabel(heightDisplayUnit)}
+                {metersToHeightUnit(pinRecommendation.residualHoldover_cm / 100, heightDisplayUnit).toFixed(2)}{" "}
+                {formatHeightUnitLabel(heightDisplayUnit)}
               </p>
             ) : (
               <p>Keine Pins definiert.</p>
@@ -160,7 +195,10 @@ export function AimPage() {
       </section>
 
       <section className="card">
-        <h3>Zielscheibe Visualisierung</h3>
+        <h3>
+          Zielscheibe Visualisierung{" "}
+          <InfoHint text="Einfache SVG-Vorschau: die Markierung zeigt, wie weit ueber oder unter dem Ziel gehalten werden muss." />
+        </h3>
         <svg width="100%" height="180" viewBox="0 0 360 180" role="img" aria-label="Target visual">
           <circle cx="90" cy="90" r="60" fill="none" stroke="currentColor" strokeWidth="2" />
           <circle cx="90" cy="90" r="35" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -168,16 +206,23 @@ export function AimPage() {
           <line x1="90" y1="90" x2="250" y2={Math.max(20, Math.min(160, 90 - holdover.holdover_cm))} stroke="#22d3ee" strokeWidth="3" />
           <circle cx="250" cy={Math.max(20, Math.min(160, 90 - holdover.holdover_cm))} r="7" fill="#22d3ee" />
           <text x="180" y="20">
-            Marker Holdover {metersToHeightUnit(holdover.holdover_cm / 100, heightDisplayUnit).toFixed(1)} {formatHeightUnitLabel(heightDisplayUnit)}
+            Marker Holdover {metersToHeightUnit(holdover.holdover_cm / 100, heightDisplayUnit).toFixed(1)}{" "}
+            {formatHeightUnitLabel(heightDisplayUnit)}
           </text>
         </svg>
       </section>
 
       <section className="card">
-        <h3>Range Card</h3>
+        <h3>
+          Range Card{" "}
+          <InfoHint text="Erzeugt eine Distanztabelle mit Drop, Holdover, Drift und optional einem geloesten Trefferwinkel." />
+        </h3>
         <div className="layout-grid compact-grid">
           <label className="field">
-            <span>Distanzen (m)</span>
+            <span>
+              Distanzen (m){" "}
+              <InfoHint text="Kommagetrennte Distanzliste fuer Range Card und Druckansicht, zum Beispiel 10,20,30,40,50." />
+            </span>
             <input value={rangeDistances} onChange={(event) => setRangeDistances(event.target.value)} />
           </label>
           <label className="field-inline">
@@ -204,7 +249,7 @@ export function AimPage() {
                   <td>{metersToHeightUnit(row.drop_m, heightDisplayUnit).toFixed(3)}</td>
                   <td>{metersToHeightUnit(row.holdover_cm / 100, heightDisplayUnit).toFixed(2)}</td>
                   <td>{metersToHeightUnit(row.drift_cm / 100, heightDisplayUnit).toFixed(2)}</td>
-                  <td>{row.solvedAngle_deg === null ? "-" : `${row.solvedAngle_deg.toFixed(2)}°`}</td>
+                  <td>{row.solvedAngle_deg === null ? "-" : `${row.solvedAngle_deg.toFixed(2)} deg`}</td>
                 </tr>
               ))}
             </tbody>
@@ -213,7 +258,9 @@ export function AimPage() {
 
         <div className="inline-actions">
           <button type="button" onClick={savePrintPayload}>Drucken</button>
-          <button type="button" onClick={() => window.alert("Nutze im Druckdialog 'Als PDF speichern'.")}>Als PDF speichern</button>
+          <button type="button" onClick={() => window.alert("Nutze im Druckdialog 'Als PDF speichern'.")}>
+            Als PDF speichern
+          </button>
         </div>
       </section>
     </main>

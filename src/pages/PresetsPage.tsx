@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react"
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
+import { useMemo, useState } from "react"
+import { InfoHint } from "../components/InfoHint"
 import { buildDefaultComponent, sumComponentWeight, sumComponentWeightByCategory } from "../lib/componentsBuilder"
 import { buildPresetExport, parsePresetImport } from "../lib/presetIO"
 import { decodeShareParams, encodeShareParams } from "../lib/share"
@@ -142,8 +143,11 @@ export function PresetsPage() {
   return (
     <main className="page">
       <header className="hero">
-        <h2>Preset Manager</h2>
-        <p>Presets verwalten, Pfeile konfigurieren, importieren/exportieren und teilen.</p>
+        <h2>
+          Preset Manager{" "}
+          <InfoHint text="Verwaltet Presets, Arrow-Builder-Profile, Komponentenlisten und Share/Import-Funktionen zentral fuer die gesamte App." />
+        </h2>
+        <p>Presets verwalten, Pfeile konfigurieren, importieren, exportieren und teilen.</p>
         <div className="hero-meta">
           <span>Aktiver Pfeil: {activeArrowBuild?.name ?? "Kein Pfeil"}</span>
           <span>Gespeicherte Pfeile: {arrowBuilds.length}</span>
@@ -154,7 +158,7 @@ export function PresetsPage() {
       <section className="card inline-actions accent-card accent-primary">
         <button type="button" onClick={exportPresets}>Presets exportieren</button>
         <label className="field">
-          <span>Import Datei</span>
+          <span>Import Datei <InfoHint text="Importiert Presets aus einer JSON-Datei. Konflikte koennen ueberschrieben oder als Kopie importiert werden." /></span>
           <input
             type="file"
             accept="application/json"
@@ -203,7 +207,7 @@ export function PresetsPage() {
           </div>
           <div className="layout-grid compact-grid">
             <article className="card">
-              <h4>Konflikte</h4>
+              <h4>Konflikte <InfoHint text="Konflikte entstehen, wenn importierte und lokale Presets dieselbe ID verwenden." /></h4>
               <p>{importDialog.conflictIds.length} IDs existieren bereits im lokalen Bestand.</p>
               {importDialog.conflictIds.length > 0 && (
                 <ul className="pill-list">
@@ -214,7 +218,7 @@ export function PresetsPage() {
               )}
             </article>
             <article className="card">
-              <h4>Merge Strategie</h4>
+              <h4>Merge Strategie <InfoHint text="Overwrite ersetzt gleiche IDs. Copy legt importierte Presets als neue lokale Kopien an." /></h4>
               <div className="radio-row">
                 <label>
                   <input
@@ -261,7 +265,7 @@ export function PresetsPage() {
       </section>
 
       <section className="card">
-        <h3>Presets</h3>
+        <h3>Presets <InfoHint text="Presets speichern komplettes Setup inklusive Advanced Settings und optional Wind." /></h3>
         <div className="table-wrapper">
           <table>
             <thead>
@@ -296,7 +300,7 @@ export function PresetsPage() {
       <section className="card accent-card accent-cyan">
         <div className="table-header">
           <div>
-            <h3>Arrow Builder</h3>
+            <h3>Arrow Builder <InfoHint text="Gespeicherte Pfeile bestehen aus Komponentenlisten und koennen appweit als aktiver Pfeil verwendet werden." /></h3>
             <p>
               Aktiver Pfeil: <strong>{activeArrowBuild?.name ?? "Kein Pfeil"}</strong> | Gesamtgewicht {totalWeight.toFixed(2)} grain
             </p>
@@ -341,11 +345,11 @@ export function PresetsPage() {
       <section className="card accent-card accent-amber">
         <div className="table-header">
           <div>
-            <h3>Komponenten Builder</h3>
+            <h3>Komponenten Builder <InfoHint text="Hier wird die Komponentenliste des aktuell aktiven Pfeils bearbeitet. Das Gesamtgewicht kann direkt ins Active Setup uebernommen werden." /></h3>
             <p>Bearbeitet immer den aktuell ausgewaehlten Pfeil und macht ihn fuer alle Rechner verfuegbar.</p>
           </div>
           <div className="inline-actions">
-            <button type="button" onClick={() => setComponents([...components, buildDefaultComponent()])}>Komponente hinzufügen</button>
+            <button type="button" onClick={() => setComponents([...components, buildDefaultComponent()])}>Komponente hinzufuegen</button>
             <button type="button" onClick={() => updateComponentWeightAsSetup(totalWeight)}>Gewicht ins Active Setup</button>
           </div>
         </div>
@@ -404,7 +408,7 @@ export function PresetsPage() {
           </div>
 
           <article className="card">
-            <h4>Gewichtsverteilung</h4>
+            <h4>Gewichtsverteilung <InfoHint text="Die Verteilung nach Kategorien zeigt, wo das meiste Pfeilgewicht liegt." /></h4>
             <div className="chart-wrapper mini-chart">
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>

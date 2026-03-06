@@ -9,9 +9,10 @@ import {
   YAxis,
 } from "recharts"
 import { useMemo, useState } from "react"
-import { formatHeightUnitLabel, metersToHeightUnit } from "../lib/units"
 import type { HeightDisplayUnit } from "../lib/types"
+import { formatHeightUnitLabel, metersToHeightUnit } from "../lib/units"
 import type { CurveRangeMode } from "../types/ballistics"
+import { InfoHint } from "./InfoHint"
 
 export interface TrajectoryChartPoint {
   xM: number
@@ -147,7 +148,10 @@ export function TrajectoryChart({ data, rangeMode, heightUnit, onToggleRange }: 
   return (
     <section className="card chart-card">
       <div className="chart-header">
-        <h2>Flugkurve</h2>
+        <h2>
+          Flugkurve{" "}
+          <InfoHint text="Die Kurve startet immer bei 0 m Distanz und 0 Hoehe. Die Achsen skalieren automatisch auf maximale Distanz und maximale Hoehe plus 5 Prozent Reserve." />
+        </h2>
         <button type="button" onClick={onToggleRange}>
           {buttonLabel}
         </button>
@@ -200,7 +204,10 @@ export function TrajectoryChart({ data, rangeMode, heightUnit, onToggleRange }: 
             <span>KE: {formatValue(hoveredPoint.kineticEnergyJ, 2)} J</span>
           </>
         ) : (
-          <span>Mit der Maus auf die Parabel fahren, um Vektor und Live-Stats zu sehen.</span>
+          <span>
+            Mit der Maus auf die Parabel fahren, um Vektor und Live-Stats zu sehen.{" "}
+            <InfoHint text="Beim Hover werden Geschwindigkeitsvektor, Distanz, Hoehe, Zeit, Geschwindigkeit und kinetische Energie des aktuellen Punktes angezeigt." />
+          </span>
         )}
       </div>
     </section>

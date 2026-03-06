@@ -1,38 +1,31 @@
 import { useMemo, useState } from "react"
 import {
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts"
+import { Link } from "react-router-dom"
+import { AdvancedSettingsPanel } from "../components/AdvancedSettingsPanel"
 import { AngleControl } from "../components/AngleControl"
 import { ArrowInputs } from "../components/ArrowInputs"
-import { AdvancedSettingsPanel } from "../components/AdvancedSettingsPanel"
+import { InfoHint } from "../components/InfoHint"
 import { MetricsCards } from "../components/MetricsCards"
 import { SupportPointsTable } from "../components/SupportPointsTable"
 import { TrajectoryChart } from "../components/TrajectoryChart"
 import type { TrajectoryChartPoint } from "../components/TrajectoryChart"
 import { useDebouncedValue } from "../hooks/useDebouncedValue"
 import { buildSupportPoints, filterCurvePoints, findApproxPointAtDistance, simulateBallistics } from "../lib/ballistics"
-import { calibrateFromMeasurement, type CalibrationResult, type CalibrationTarget } from "../lib/calibration"
 import { supportPointsToCsv } from "../lib/csv"
-import type { AdvancedParams, HeightDisplayUnit, Preset } from "../lib/types"
+import type { HeightDisplayUnit } from "../lib/types"
 import { formatHeightUnitLabel, fpsToMps, metersToHeightUnit, mpsToFps } from "../lib/units"
 import { validateInputs } from "../lib/validation"
 import { toAdvancedSettings, toUserInputs, toWindOptions } from "../lib/simulationAdapters"
-import type { AngleInputMode, CurveRangeMode, SpeedUnit } from "../types/ballistics"
 import { useAppStore } from "../store/useAppStore"
-
-interface CalibrationPreview {
-  result: CalibrationResult
-  calibratedAdvanced: AdvancedParams
-  chartData: Array<{ xM: number; beforeY: number; afterY: number; targetY: number }>
-}
+import type { AngleInputMode, CurveRangeMode, SpeedUnit } from "../types/ballistics"
 
 function triggerCsvDownload(filename: string, content: string) {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8" })
@@ -70,63 +63,17 @@ function getSpeedRangeForUnit(unit: SpeedUnit): { min: number; max: number } {
   }
 }
 
-function buildCalibrationChartData(
-  beforePoints: TrajectoryChartPoint[],
-  afterPoints: TrajectoryChartPoint[],
-  targetY_m: number,
-  targetDistance_m: number,
-): Array<{ xM: number; beforeY: number; afterY: number; targetY: number }> {
-  const maxDistance = Math.max(
-    targetDistance_m * 1.2,
-    beforePoints[beforePoints.length - 1]?.xM ?? 0,
-    afterPoints[afterPoints.length - 1]?.xM ?? 0,
-  )
-  const steps = Math.max(40, Math.min(160, Math.ceil(maxDistance / 1.5)))
-  const rows: Array<{ xM: number; beforeY: number; afterY: number; targetY: number }> = []
-
-  for (let index = 0; index <= steps; index += 1) {
-    const xM = (maxDistance / steps) * index
-    rows.push({
-      xM,
-      beforeY: findApproxPointAtDistance(
-        beforePoints.map((point) => ({
-          timeSec: point.timeSec,
-          xM: point.xM,
-          yM: point.yM,
-          zM: 0,
-          vxMs: point.vxMs,
-          vyMs: point.vyMs,
-          vzMs: 0,
-        })),
-        xM,
-      ).yM,
-      afterY: findApproxPointAtDistance(
-        afterPoints.map((point) => ({
-          timeSec: point.timeSec,
-          xM: point.xM,
-          yM: point.yM,
-          zM: 0,
-          vxMs: point.vxMs,
-          vyMs: point.vyMs,
-          vzMs: 0,
-        })),
-        xM,
-      ).yM,
-      targetY: targetY_m,
-    })
-  }
-
-  return rows
-}
-
-function toChartPoints(points: Array<{
-  xM: number
-  yM: number
-  timeSec: number
-  vxMs: number
-  vyMs: number
-  vzMs: number
-}>, massKg: number): TrajectoryChartPoint[] {
+function toChartPoints(
+  points: Array<{
+    xM: number
+    yM: number
+    timeSec: number
+    vxMs: number
+    vyMs: number
+    vzMs: number
+  }>,
+  massKg: number,
+): TrajectoryChartPoint[] {
   return points.map((point) => {
     const speedMs = Math.sqrt(point.vxMs * point.vxMs + point.vyMs * point.vyMs + point.vzMs * point.vzMs)
 
@@ -161,7 +108,6 @@ export function FlightPage() {
   const updateWind = useAppStore((state) => state.updateWind)
   const applyPreset = useAppStore((state) => state.applyPreset)
   const saveCurrentAsPreset = useAppStore((state) => state.saveCurrentAsPreset)
-  const upsertPreset = useAppStore((state) => state.upsertPreset)
   const applyArrowBuild = useAppStore((state) => state.applyArrowBuild)
   const setHeightDisplayUnit = useAppStore((state) => state.setHeightDisplayUnit)
 
@@ -171,13 +117,6 @@ export function FlightPage() {
   const [curveRangeMode, setCurveRangeMode] = useState<CurveRangeMode>("apex")
   const [performanceMode, setPerformanceMode] = useState(false)
   const [driftDistanceM, setDriftDistanceM] = useState(50)
-
-  const [calDistanceM, setCalDistanceM] = useState(30)
-  const [calDropCm, setCalDropCm] = useState(25)
-  const [calTarget, setCalTarget] = useState<CalibrationTarget>("cw")
-  const [calSignMode, setCalSignMode] = useState<"auto-negative" | "manual">("auto-negative")
-  const [calManualSign, setCalManualSign] = useState<1 | -1>(-1)
-  const [calibrationPreview, setCalibrationPreview] = useState<CalibrationPreview | null>(null)
 
   const debouncedState = useDebouncedValue({ setup, advanced, wind }, 150)
 
@@ -278,83 +217,6 @@ export function FlightPage() {
   const speedDisplayValue = speedUnit === "fps" ? setup.v_fps : fpsToMps(setup.v_fps)
   const speedRange = getSpeedRangeForUnit(speedUnit)
 
-  const runCalibration = () => {
-    if (!simulation) {
-      return
-    }
-
-    const result = calibrateFromMeasurement({
-      setup,
-      advanced,
-      wind,
-      measuredDistance_m: calDistanceM,
-      measuredDrop_cm: calDropCm,
-      signMode: calSignMode,
-      measuredDropSign: calManualSign,
-      calibrationTarget: calTarget,
-      cwRange: { min: 0.5, max: 5.0 },
-      kRange: { min: 0.0001, max: 0.05 },
-      maxIter: 50,
-    })
-
-    const calibratedAdvanced: AdvancedParams =
-      calTarget === "cw"
-        ? { ...advanced, cw: result.calibratedValue, k_override: null }
-        : { ...advanced, k_override: result.calibratedValue }
-
-    const calibratedSimulation = simulateBallistics(
-      toUserInputs(setup),
-      toAdvancedSettings(calibratedAdvanced),
-      toWindOptions(wind),
-    )
-
-    const beforePoints = toChartPoints(
-      filterCurvePoints(simulation.points, Math.max(calDistanceM * 1.2, simulation.nullDistanceM)),
-      simulation.derived.massKg,
-    )
-    const afterPoints = toChartPoints(
-      filterCurvePoints(calibratedSimulation.points, Math.max(calDistanceM * 1.2, calibratedSimulation.nullDistanceM)),
-      calibratedSimulation.derived.massKg,
-    )
-
-    setCalibrationPreview({
-      result,
-      calibratedAdvanced,
-      chartData: buildCalibrationChartData(beforePoints, afterPoints, result.targetY_m, calDistanceM),
-    })
-  }
-
-  const applyCalibration = () => {
-    if (!calibrationPreview) {
-      return
-    }
-
-    updateAdvanced(calibrationPreview.calibratedAdvanced)
-  }
-
-  const saveCalibratedPreset = () => {
-    if (!calibrationPreview) {
-      return
-    }
-
-    const name = window.prompt("Preset Name fuer kalibriertes Setup")
-    if (!name) {
-      return
-    }
-
-    const preset: Preset = {
-      id: `preset-${Date.now()}`,
-      name,
-      setup: { ...setup },
-      advanced: { ...calibrationPreview.calibratedAdvanced },
-      wind: { ...wind },
-      isSystem: false,
-    }
-
-    upsertPreset(preset)
-    window.alert("Kalibriertes Preset gespeichert")
-  }
-
   const copyValues = async () => {
     const payload = {
       setup,
@@ -379,7 +241,9 @@ export function FlightPage() {
   return (
     <main className="page">
       <header className="hero">
-        <h2>Flugparabel</h2>
+        <h2>
+          Flugparabel <InfoHint text="Hauptrechner fuer Trajektorie, Kennwerte, Wind, Drift und die zentrale Analyse des aktuell aktiven Setups." />
+        </h2>
         <p>Hauptrechner fuer Trajektorie, Kennwerte, Wind und Drift.</p>
         <div className="hero-meta">
           <span>Idee: Guido Zauta</span>
@@ -440,7 +304,7 @@ export function FlightPage() {
 
       <div className="layout-grid">
         <section className="card panel-lift">
-          <h3>Preset</h3>
+          <h3>Preset <InfoHint text="Hier wechselst du zwischen gespeicherten Presets und aktiven Pfeilprofilen. Beide wirken sofort global in der App." /></h3>
           <label className="field">
             <span>Auswahl</span>
             <select value={activePresetId} onChange={(event) => applyPreset(event.target.value)}>
@@ -504,10 +368,8 @@ export function FlightPage() {
       <section className="card accent-card accent-cyan">
         <div className="table-header">
           <div>
-            <h3>Wind und Seitenabweichung</h3>
-            <p>
-              Ruecken- und Gegenwind beeinflussen die Reichweite. Seitenwind erzeugt zusaetzlich einen lateralen Drift.
-            </p>
+            <h3>Wind und Seitenabweichung <InfoHint text="Ruecken- und Gegenwind beeinflussen die Reichweite. Seitenwind erzeugt eine laterale Abweichung auf der z-Achse." /></h3>
+            <p>Ruecken- und Gegenwind beeinflussen die Reichweite. Seitenwind erzeugt zusaetzlich einen lateralen Drift.</p>
           </div>
           <div className="hero-meta">
             <span>Reichweiten-Effekt: {rangeDeltaM >= 0 ? "+" : ""}{rangeDeltaM.toFixed(2)} m</span>
@@ -524,7 +386,7 @@ export function FlightPage() {
             Wind aktiv
           </label>
           <label className="field">
-            <span>Windgeschwindigkeit (m/s)</span>
+            <span>Windgeschwindigkeit (m/s) <InfoHint text="Staerke des Windvektors. Rueckenwind verlaengert typischerweise die Reichweite, Gegenwind reduziert sie." /></span>
             <input
               type="number"
               value={wind.windSpeed_mps}
@@ -533,7 +395,7 @@ export function FlightPage() {
             />
           </label>
           <label className="field">
-            <span>Windrichtung (deg)</span>
+            <span>Windrichtung (deg) <InfoHint text="0 kommt von hinten, 90 von rechts, 180 von vorne, 270 von links." /></span>
             <input
               type="number"
               value={wind.windDirection_deg}
@@ -542,7 +404,7 @@ export function FlightPage() {
             />
           </label>
           <label className="field">
-            <span>Ziel Distanz fuer Drift (m)</span>
+            <span>Ziel Distanz fuer Drift (m) <InfoHint text="An dieser Distanz wird der aktuelle seitliche Versatz des Pfeils ausgewiesen." /></span>
             <input
               type="number"
               value={driftDistanceM}
@@ -621,89 +483,17 @@ export function FlightPage() {
         </>
       )}
 
-      <details className="card accent-card accent-amber">
-        <summary>Kalibrierung</summary>
-        <div className="layout-grid compact-grid">
-          <label className="field">
-            <span>Messdistanz (m)</span>
-            <input type="number" value={calDistanceM} onChange={(event) => setCalDistanceM(Number(event.target.value) || 0)} />
-          </label>
-          <label className="field">
-            <span>Gemessener Drop (cm)</span>
-            <input type="number" value={calDropCm} onChange={(event) => setCalDropCm(Number(event.target.value) || 0)} />
-          </label>
-          <label className="field">
-            <span>Kalibrierziel</span>
-            <select value={calTarget} onChange={(event) => setCalTarget(event.target.value as CalibrationTarget)}>
-              <option value="cw">Kalibriere Cw</option>
-              <option value="k">Kalibriere k direkt</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>Drop Interpretation</span>
-            <select value={calSignMode} onChange={(event) => setCalSignMode(event.target.value as "auto-negative" | "manual")}>
-              <option value="auto-negative">Auto: negativ</option>
-              <option value="manual">Manuell</option>
-            </select>
-          </label>
-          {calSignMode === "manual" && (
-            <label className="field">
-              <span>Manuelles Vorzeichen</span>
-              <select value={calManualSign} onChange={(event) => setCalManualSign(Number(event.target.value) as 1 | -1)}>
-                <option value={-1}>Negativ</option>
-                <option value={1}>Positiv</option>
-              </select>
-            </label>
-          )}
-        </div>
-        <div className="inline-actions">
-          <button type="button" onClick={runCalibration}>Kalibrierung berechnen</button>
-          <button type="button" onClick={applyCalibration} disabled={!calibrationPreview}>Kalibrierung anwenden</button>
-          <button type="button" onClick={saveCalibratedPreset} disabled={!calibrationPreview}>Als Preset speichern</button>
-        </div>
-
-        {calibrationPreview && (
-          <div className="stack">
-            <div className="result-grid">
-              <article className="card">
-                <h3>Vorher</h3>
-                <p>{calibrationPreview.result.previousValue.toFixed(5)}</p>
-                <small>Fehler: {calibrationPreview.result.errorBefore_m.toFixed(4)} m</small>
-              </article>
-              <article className="card">
-                <h3>Nachher</h3>
-                <p>{calibrationPreview.result.calibratedValue.toFixed(5)}</p>
-                <small>Fehler: {calibrationPreview.result.errorAfter_m.toFixed(4)} m</small>
-              </article>
-              <article className="card">
-                <h3>Zielwert</h3>
-                <p>{formatVerticalValue(calibrationPreview.result.targetY_m, heightDisplayUnit)}</p>
-                <small>{calibrationPreview.result.usedSignSwitch ? "Binary Search mit Vorzeichenwechsel" : "Best-Fit ohne Vorzeichenwechsel"}</small>
-              </article>
-            </div>
-            <div className="chart-wrapper mini-chart">
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={calibrationPreview.chartData} margin={{ top: 8, right: 12, left: 8, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="xM" tickFormatter={(value) => Number(value).toFixed(0)} />
-                  <YAxis tickFormatter={(value) => metersToHeightUnit(Number(value), heightDisplayUnit).toFixed(1)} />
-                  <Tooltip
-                    formatter={(value: number, name: string) =>
-                      [`${metersToHeightUnit(value, heightDisplayUnit).toFixed(2)} ${formatHeightUnitLabel(heightDisplayUnit)}`, name]
-                    }
-                    labelFormatter={(value) => `Distanz ${Number(value).toFixed(2)} m`}
-                  />
-                  <Legend />
-                  <ReferenceLine x={calDistanceM} stroke="#f59e0b" strokeDasharray="4 4" label="Messdistanz" />
-                  <Line type="monotone" dataKey="beforeY" name="Vorher" stroke="#64748b" dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="afterY" name="Nachher" stroke="#10b981" dot={false} isAnimationActive={false} />
-                  <Line type="monotone" dataKey="targetY" name="Messziel" stroke="#f59e0b" dot={false} isAnimationActive={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+      <section className="card accent-card accent-amber">
+        <div className="table-header">
+          <div>
+            <h3>Kalibrierung als separater Modus <InfoHint text="Testschuesse werden in einem eigenen Arbeitsbereich erfasst und erst nach Pruefung in das aktive Setup uebernommen." /></h3>
+            <p>Testschuesse werden jetzt in einem eigenen Arbeitsbereich erfasst, geprueft und erst danach in das aktive Setup uebernommen.</p>
           </div>
-        )}
-      </details>
+          <Link to="/calibration" className="tab-link active">
+            Zur Kalibrierung
+          </Link>
+        </div>
+      </section>
     </main>
   )
 }

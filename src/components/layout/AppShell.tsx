@@ -4,8 +4,10 @@ import { decodeShareParams } from "../../lib/share"
 import { useAppStore } from "../../store/useAppStore"
 
 const tabs = [
+  { to: "/home", label: "Start" },
   { to: "/flight", label: "Flugparabel" },
   { to: "/aim", label: "Zielhilfe" },
+  { to: "/calibration", label: "Kalibrierung" },
   { to: "/setup", label: "Setup Rechner" },
   { to: "/compare", label: "Vergleich" },
   { to: "/presets", label: "Preset Manager" },

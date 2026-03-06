@@ -1,4 +1,5 @@
 import type { SpeedUnit } from "../types/ballistics"
+import { InfoHint } from "./InfoHint"
 
 interface ArrowInputsProps {
   speedValue: number
@@ -27,7 +28,7 @@ export function ArrowInputs({
 }: ArrowInputsProps) {
   return (
     <section className="card">
-      <h2>Eingabe Pfeilparameter</h2>
+      <h2>Eingabe Pfeilparameter <InfoHint text="Diese Werte definieren das globale Pfeil-Setup. Geschwindigkeit, Durchmesser und Gewicht werden in allen Rechnern weiterverwendet." /></h2>
 
       <div className="unit-switch" role="group" aria-label="Geschwindigkeitseinheit">
         <button
@@ -47,7 +48,7 @@ export function ArrowInputs({
       </div>
 
       <label className="field">
-        <span>Pfeilgeschwindigkeit ({speedUnit === "fps" ? "fps" : "m/s"})</span>
+        <span>Pfeilgeschwindigkeit ({speedUnit === "fps" ? "fps" : "m/s"}) <InfoHint text="Die Eingabe kann in fps oder m/s erfolgen. Intern wird sie fuer das globale Setup in fps gespeichert." /></span>
         <input
           type="number"
           value={speedValue}
@@ -59,7 +60,7 @@ export function ArrowInputs({
       </label>
 
       <label className="field">
-        <span>Pfeildurchmesser (mm)</span>
+        <span>Pfeildurchmesser (mm) <InfoHint text="Der Durchmesser bestimmt die Stirnflaeche A und beeinflusst damit den Luftwiderstand." /></span>
         <input
           type="number"
           value={diameterMm}
@@ -71,7 +72,7 @@ export function ArrowInputs({
       </label>
 
       <label className="field">
-        <span>Pfeilgewicht (grain)</span>
+        <span>Pfeilgewicht (grain) <InfoHint text="Das Pfeilgewicht wird global verwendet und kann auch aus dem Arrow Builder uebernommen werden." /></span>
         <input
           type="number"
           value={weightGrain}

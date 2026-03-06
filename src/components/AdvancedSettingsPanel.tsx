@@ -1,4 +1,5 @@
 import type { AdvancedSettings } from "../types/ballistics"
+import { InfoHint } from "./InfoHint"
 
 interface AdvancedSettingsProps {
   settings: AdvancedSettings
@@ -15,11 +16,11 @@ export function AdvancedSettingsPanel({ settings, onSettingsChange }: AdvancedSe
 
   return (
     <details className="card">
-      <summary>Advanced Settings</summary>
+      <summary>Advanced Settings <InfoHint text="Hier werden Widerstand, Dichte, Integrationsschritt und Simulationsmodus angepasst. Diese Werte wirken global in allen Rechnern." /></summary>
 
       <div className="advanced-grid">
         <label className="field">
-          <span>Simulation Mode</span>
+          <span>Simulation Mode <InfoHint text="Referenzmodus nutzt das bestehende Modell mit abs in der vertikalen Drag-Komponente. Physik sauber nutzt den signierten Vektoransatz." /></span>
           <select
             value={settings.simulationMode ?? "excel"}
             onChange={(event) =>
@@ -35,7 +36,7 @@ export function AdvancedSettingsPanel({ settings, onSettingsChange }: AdvancedSe
         </label>
 
         <label className="field">
-          <span>Cw</span>
+          <span>Cw <InfoHint text="Der Widerstandsbeiwert skaliert die Bremswirkung durch den Luftwiderstand." /></span>
           <input
             type="number"
             value={settings.cw}
@@ -47,7 +48,7 @@ export function AdvancedSettingsPanel({ settings, onSettingsChange }: AdvancedSe
         </label>
 
         <label className="field">
-          <span>g</span>
+          <span>g <InfoHint text="Schwerkraftkonstante fuer die vertikale Beschleunigung." /></span>
           <input
             type="number"
             value={settings.g}
@@ -59,7 +60,7 @@ export function AdvancedSettingsPanel({ settings, onSettingsChange }: AdvancedSe
         </label>
 
         <label className="field">
-          <span>rho</span>
+          <span>rho <InfoHint text="Luftdichte. Hoehere Dichte vergroessert den Widerstand." /></span>
           <input
             type="number"
             value={settings.rho}
@@ -71,7 +72,7 @@ export function AdvancedSettingsPanel({ settings, onSettingsChange }: AdvancedSe
         </label>
 
         <label className="field">
-          <span>dt</span>
+          <span>dt <InfoHint text="Zeitschritt der Integration. Kleinere Werte sind genauer, aber rechenintensiver." /></span>
           <input
             type="number"
             value={settings.dt}
@@ -83,7 +84,7 @@ export function AdvancedSettingsPanel({ settings, onSettingsChange }: AdvancedSe
         </label>
 
         <label className="field">
-          <span>maxTimeSec</span>
+          <span>maxTimeSec <InfoHint text="Maximale Simulationsdauer. Relevant fuer sehr weite oder langsame Schuesse." /></span>
           <input
             type="number"
             value={settings.maxTimeSec}
@@ -95,7 +96,7 @@ export function AdvancedSettingsPanel({ settings, onSettingsChange }: AdvancedSe
         </label>
 
         <label className="field">
-          <span>k Override (optional)</span>
+          <span>k Override (optional) <InfoHint text="Setzt den gesamten Drag-Term direkt und ueberschreibt damit die Ableitung aus Cw, rho, Querschnitt und Masse." /></span>
           <input
             type="number"
             value={settings.kOverride ?? ""}

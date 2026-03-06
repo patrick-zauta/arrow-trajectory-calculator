@@ -1,4 +1,5 @@
 import type { AngleInputMode } from "../types/ballistics"
+import { InfoHint } from "./InfoHint"
 
 interface AngleControlProps {
   angleDeg: number
@@ -21,7 +22,7 @@ export function AngleControl({
 
   return (
     <section className="card">
-      <h2>Eingabe Abschusswinkel</h2>
+      <h2>Eingabe Abschusswinkel <InfoHint text="Der Winkel kann direkt numerisch gesetzt oder ueber eine Feineinstellung geregelt werden. Alle Aenderungen wirken sofort auf die globale Kurve." /></h2>
 
       <div className="radio-row">
         <label>
@@ -47,7 +48,7 @@ export function AngleControl({
 
       <div className="field-group">
         <label className="field">
-          <span>Winkel (Direkt) in Grad</span>
+          <span>Winkel (Direkt) in Grad <InfoHint text="Im Direktmodus wird der Winkel als exakter Zahlenwert editiert. Die Feineinstellung bleibt dabei deaktiviert." /></span>
           <input
             type="number"
             value={angleDeg}

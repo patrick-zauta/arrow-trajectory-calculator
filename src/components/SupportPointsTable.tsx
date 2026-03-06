@@ -1,6 +1,7 @@
 import { formatHeightUnitLabel, metersToHeightUnit } from "../lib/units"
 import type { HeightDisplayUnit } from "../lib/types"
 import type { SupportPoint } from "../types/ballistics"
+import { InfoHint } from "./InfoHint"
 
 interface SupportPointsTableProps {
   points: SupportPoint[]
@@ -12,7 +13,7 @@ export function SupportPointsTable({ points, heightUnit, onExportCsv }: SupportP
   return (
     <section className="card">
       <div className="table-header">
-        <h2>Stuetzpunkte (alle 2 m)</h2>
+        <h2>Stuetzpunkte (alle 2 m) <InfoHint text="Die Tabelle nutzt die Approx-Match-Logik: fuer jede Zieldistanz wird der letzte Simulationspunkt mit x <= Ziel verwendet." /></h2>
         <button type="button" onClick={onExportCsv}>
           CSV Export
         </button>

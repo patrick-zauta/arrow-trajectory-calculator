@@ -13,7 +13,7 @@ describe("compare page", () => {
 
     expect(screen.getAllByText("Setup A").length).toBeGreaterThan(0)
     expect(screen.getAllByText("Setup B").length).toBeGreaterThan(0)
-    expect(screen.getByRole("heading", { name: "Kennwerte" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: /Kennwerte/, level: 3 })).toBeInTheDocument()
   })
 
   it("duplicates setup A", () => {
