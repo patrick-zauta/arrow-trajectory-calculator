@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react"
+import { Bar, BarChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { DraftNumberInput } from "../components/DraftNumberInput"
 import { InfoHint } from "../components/InfoHint"
-import { buildJournalEntry, buildJournalRound } from "../lib/journal"
+import { buildJournalEntry, buildJournalIntensitySeries, buildJournalRound } from "../lib/journal"
 import { useAppStore } from "../store/useAppStore"
 
 export function JournalPage() {
@@ -39,6 +40,14 @@ export function JournalPage() {
   const fastTotalArrows = fastTraining.rounds.reduce((sum, round) => sum + round.arrowCount, 0)
   const fastTotalHits = fastTraining.rounds.reduce((sum, round) => sum + (round.hits ?? 0), 0)
   const fastTotalPoints = fastTraining.rounds.reduce((sum, round) => sum + (round.points ?? 0), 0)
+  const intensitySeries = useMemo(() => buildJournalIntensitySeries(journalEntries), [journalEntries])
+  const averageArrowsPerSession = intensitySeries.length > 0
+    ? intensitySeries.reduce((sum, entry) => sum + entry.totalArrows, 0) / intensitySeries.length
+    : 0
+  const peakSession = intensitySeries.reduce<(typeof intensitySeries)[number] | null>(
+    (current, entry) => (!current || entry.totalArrows > current.totalArrows ? entry : current),
+    null,
+  )
 
   const saveEntry = () => {
     const normalizedRoundCount = Math.max(1, Math.round(roundCount))
@@ -246,6 +255,52 @@ export function JournalPage() {
             )}
           </ul>
         </article>
+      </section>
+
+      <section className="card chart-card">
+        <div className="chart-header">
+          <h3>Training Intensitaet <InfoHint text="Die Grafik zeigt die letzten Journal-Sessions. Balken stehen fuer total geschossene Pfeile, die Linie fuer die total erfassten Punkte pro Session." /></h3>
+        </div>
+        {intensitySeries.length === 0 ? (
+          <p>Noch keine Trainingsdaten fuer die Intensitaetsansicht vorhanden.</p>
+        ) : (
+          <>
+            <div className="chart-wrapper mini-chart">
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={intensitySeries} margin={{ top: 12, right: 16, left: 8, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="label" />
+                  <YAxis yAxisId="left" allowDecimals={false} label={{ value: "Pfeile", angle: -90, position: "insideLeft" }} />
+                  <YAxis yAxisId="right" orientation="right" allowDecimals={false} label={{ value: "Punkte", angle: 90, position: "insideRight" }} />
+                  <Tooltip
+                    formatter={(value: number, name: string) => {
+                      if (name === "totalArrows") {
+                        return [`${value} Pfeile`, "Intensitaet"]
+                      }
+
+                      if (name === "totalPoints") {
+                        return [`${value} Punkte`, "Punkte"]
+                      }
+
+                      return [String(value), name]
+                    }}
+                    labelFormatter={(label, payload) => {
+                      const point = payload?.[0]?.payload as (typeof intensitySeries)[number] | undefined
+                      return point ? `${point.label} | ${point.createdAt}` : String(label)
+                    }}
+                  />
+                  <Bar yAxisId="left" dataKey="totalArrows" fill="#27b1ff" radius={[8, 8, 0, 0]} />
+                  <Line yAxisId="right" type="monotone" dataKey="totalPoints" stroke="#f4b860" strokeWidth={2} dot={{ r: 3 }} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="chart-hover-stats">
+              <span><strong>Sessions:</strong> {intensitySeries.length}</span>
+              <span><strong>Ø Pfeile / Session:</strong> {averageArrowsPerSession.toFixed(1)}</span>
+              <span><strong>Peak:</strong> {peakSession ? `${peakSession.totalArrows} Pfeile am ${peakSession.label}` : "-"}</span>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="card">

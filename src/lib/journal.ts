@@ -1,5 +1,15 @@
 import type { FastTrainingSession, JournalEntry, JournalRound, SetupSnapshot } from "./types"
 
+export interface JournalIntensityPoint {
+  id: string
+  label: string
+  createdAt: string
+  totalArrows: number
+  roundCount: number
+  totalHits: number
+  totalPoints: number
+}
+
 export function buildSetupSnapshot(input: SetupSnapshot): SetupSnapshot {
   return {
     setup: { ...input.setup },
@@ -77,4 +87,19 @@ export function createDefaultFastTrainingSession(): FastTrainingSession {
     rounds: [],
     startedAt: null,
   }
+}
+
+export function buildJournalIntensitySeries(entries: JournalEntry[], limit = 12): JournalIntensityPoint[] {
+  return [...entries]
+    .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime())
+    .slice(-limit)
+    .map((entry) => ({
+      id: entry.id,
+      label: new Intl.DateTimeFormat("de-CH", { day: "2-digit", month: "2-digit" }).format(new Date(entry.createdAt)),
+      createdAt: entry.createdAt,
+      totalArrows: entry.totalArrows,
+      roundCount: entry.roundCount,
+      totalHits: entry.rounds.reduce((sum, round) => sum + (round.hits ?? 0), 0),
+      totalPoints: entry.rounds.reduce((sum, round) => sum + (round.points ?? 0), 0),
+    }))
 }

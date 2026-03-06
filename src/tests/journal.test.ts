@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { buildDetailedJournalRound, buildJournalEntry, buildJournalRound, createDefaultFastTrainingSession } from "../lib/journal"
+import { buildDetailedJournalRound, buildJournalEntry, buildJournalIntensitySeries, buildJournalRound, createDefaultFastTrainingSession } from "../lib/journal"
 import { DEFAULT_ADVANCED, DEFAULT_SETUP, DEFAULT_WIND } from "../store/useAppStore"
 
 describe("journal helpers", () => {
@@ -33,5 +33,37 @@ describe("journal helpers", () => {
     expect(session.active).toBe(false)
     expect(session.arrowsPerRound).toBe(8)
     expect(session.rounds).toHaveLength(0)
+  })
+
+  it("builds an intensity series from journal entries", () => {
+    const entries = [
+      buildJournalEntry("A", "", "", {
+        setup: DEFAULT_SETUP,
+        advanced: DEFAULT_ADVANCED,
+        wind: DEFAULT_WIND,
+        activeArrowBuildId: "default-arrow",
+        activeArrowBuildName: "Standardpfeil",
+      }, {
+        arrowsPerRound: 8,
+        rounds: [buildDetailedJournalRound({ arrowCount: 8, hits: 7, points: 65 })],
+      }),
+      buildJournalEntry("B", "", "", {
+        setup: DEFAULT_SETUP,
+        advanced: DEFAULT_ADVANCED,
+        wind: DEFAULT_WIND,
+        activeArrowBuildId: "default-arrow",
+        activeArrowBuildName: "Standardpfeil",
+      }, {
+        arrowsPerRound: 8,
+        rounds: [buildDetailedJournalRound({ arrowCount: 8, hits: 8, points: 72 }), buildJournalRound(8)],
+      }),
+    ]
+
+    const series = buildJournalIntensitySeries(entries)
+
+    expect(series).toHaveLength(2)
+    expect(series[0]?.totalArrows).toBe(8)
+    expect(series[1]?.totalArrows).toBe(16)
+    expect(series[1]?.totalPoints).toBe(72)
   })
 })
