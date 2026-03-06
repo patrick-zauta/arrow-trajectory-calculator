@@ -80,14 +80,17 @@ describe("useAppStore", () => {
 
     useAppStore.getState().updateFastTraining({ title: "Abendtraining", arrowsPerRound: 8 })
     useAppStore.getState().startFastTraining()
-    useAppStore.getState().addFastTrainingRound()
-    useAppStore.getState().addFastTrainingRound()
+    useAppStore.getState().addFastTrainingRound({ hits: 8, points: 72, note: "ruhig geloest" })
+    useAppStore.getState().addFastTrainingRound({ hits: 7, points: 68 })
 
     const entry = useAppStore.getState().saveFastTrainingToJournal()
     const state = useAppStore.getState()
 
     expect(entry?.roundCount).toBe(2)
     expect(entry?.totalArrows).toBe(16)
+    expect(entry?.rounds[0]?.hits).toBe(8)
+    expect(entry?.rounds[0]?.points).toBe(72)
+    expect(entry?.rounds[0]?.note).toBe("ruhig geloest")
     expect(state.journalEntries[0]?.title).toBe("Abendtraining")
     expect(state.fastTraining.active).toBe(false)
     expect(state.fastTraining.rounds).toHaveLength(0)

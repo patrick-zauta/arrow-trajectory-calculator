@@ -26,6 +26,9 @@ export function JournalPage() {
   const [notes, setNotes] = useState("")
   const [roundCount, setRoundCount] = useState(6)
   const [arrowsPerRound, setArrowsPerRound] = useState(8)
+  const [roundHits, setRoundHits] = useState<number | null>(null)
+  const [roundPoints, setRoundPoints] = useState<number | null>(null)
+  const [roundNote, setRoundNote] = useState("")
 
   const activeArrowBuild = useMemo(
     () => arrowBuilds.find((build) => build.id === activeArrowBuildId),
@@ -34,6 +37,8 @@ export function JournalPage() {
 
   const manualTotalArrows = Math.max(1, Math.round(roundCount)) * Math.max(1, Math.round(arrowsPerRound))
   const fastTotalArrows = fastTraining.rounds.reduce((sum, round) => sum + round.arrowCount, 0)
+  const fastTotalHits = fastTraining.rounds.reduce((sum, round) => sum + (round.hits ?? 0), 0)
+  const fastTotalPoints = fastTraining.rounds.reduce((sum, round) => sum + (round.points ?? 0), 0)
 
   const saveEntry = () => {
     const normalizedRoundCount = Math.max(1, Math.round(roundCount))
@@ -54,6 +59,17 @@ export function JournalPage() {
       }),
     )
     setNotes("")
+  }
+
+  const commitFastRound = () => {
+    addFastTrainingRound({
+      hits: roundHits,
+      points: roundPoints,
+      note: roundNote,
+    })
+    setRoundHits(null)
+    setRoundPoints(null)
+    setRoundNote("")
   }
 
   return (
@@ -148,6 +164,34 @@ export function JournalPage() {
               />
             </label>
             <label className="field">
+              <span>Treffer dieser Runde <InfoHint text="Optional: wie viele Pfeile in dieser Runde im Ziel oder in der Wertung waren." /></span>
+              <DraftNumberInput
+                value={roundHits}
+                allowEmpty
+                onCommit={(value) => setRoundHits(value === null ? null : Math.max(0, Math.round(value)))}
+                aria-label="Treffer dieser Runde"
+                placeholder="optional"
+              />
+            </label>
+            <label className="field">
+              <span>Punkte dieser Runde <InfoHint text="Optional: Gesamtpunktzahl oder Ringzahl fuer diese Runde." /></span>
+              <DraftNumberInput
+                value={roundPoints}
+                allowEmpty
+                onCommit={(value) => setRoundPoints(value === null ? null : Math.max(0, Math.round(value)))}
+                aria-label="Punkte dieser Runde"
+                placeholder="optional"
+              />
+            </label>
+            <label className="field">
+              <span>Rundennotiz <InfoHint text="Kurze Notiz fuer genau die naechste Runde, z. B. Technik, Wind oder Trefferbild." /></span>
+              <input
+                value={roundNote}
+                onChange={(event) => setRoundNote(event.target.value)}
+                placeholder="optional"
+              />
+            </label>
+            <label className="field">
               <span>Trainingsnotizen</span>
               <textarea
                 value={fastTraining.notes}
@@ -169,10 +213,18 @@ export function JournalPage() {
               <span className="dashboard-label">Total Pfeile</span>
               <strong>{fastTotalArrows}</strong>
             </article>
+            <article className="dashboard-stat">
+              <span className="dashboard-label">Treffer total</span>
+              <strong>{fastTotalHits}</strong>
+            </article>
+            <article className="dashboard-stat">
+              <span className="dashboard-label">Punkte total</span>
+              <strong>{fastTotalPoints}</strong>
+            </article>
           </div>
           <div className="inline-actions">
             <button type="button" onClick={startFastTraining}>{fastTraining.active ? "Training laeuft" : "Training aktivieren"}</button>
-            <button type="button" className="fast-training-plus" onClick={addFastTrainingRound} aria-label="Runde hinzufuegen">
+            <button type="button" className="fast-training-plus" onClick={commitFastRound} aria-label="Runde hinzufuegen">
               +
             </button>
             <button type="button" onClick={removeLastFastTrainingRound} disabled={fastTraining.rounds.length === 0}>Letzte Runde entfernen</button>
@@ -184,7 +236,12 @@ export function JournalPage() {
               <li>Noch keine Runde erfasst</li>
             ) : (
               fastTraining.rounds.map((round, index) => (
-                <li key={round.id}>Runde {index + 1}: {round.arrowCount} Pfeile</li>
+                <li key={round.id}>
+                  Runde {index + 1}: {round.arrowCount} Pfeile
+                  {typeof round.hits === "number" ? ` | Treffer ${round.hits}` : ""}
+                  {typeof round.points === "number" ? ` | Punkte ${round.points}` : ""}
+                  {round.note ? ` | ${round.note}` : ""}
+                </li>
               ))
             )}
           </ul>
@@ -219,6 +276,14 @@ export function JournalPage() {
                     <span className="dashboard-label">Total Pfeile</span>
                     <strong>{entry.totalArrows}</strong>
                   </article>
+                  <article className="dashboard-stat">
+                    <span className="dashboard-label">Treffer total</span>
+                    <strong>{entry.rounds.reduce((sum, round) => sum + (round.hits ?? 0), 0)}</strong>
+                  </article>
+                  <article className="dashboard-stat">
+                    <span className="dashboard-label">Punkte total</span>
+                    <strong>{entry.rounds.reduce((sum, round) => sum + (round.points ?? 0), 0)}</strong>
+                  </article>
                 </div>
                 <p><strong>Wetter:</strong> {entry.weather}</p>
                 <p><strong>Notizen:</strong> {entry.notes || "-"}</p>
@@ -228,7 +293,12 @@ export function JournalPage() {
                     <li>Keine Einzelrunden gespeichert</li>
                   ) : (
                     entry.rounds.map((round, index) => (
-                      <li key={round.id}>Runde {index + 1}: {round.arrowCount} Pfeile</li>
+                      <li key={round.id}>
+                        Runde {index + 1}: {round.arrowCount} Pfeile
+                        {typeof round.hits === "number" ? ` | Treffer ${round.hits}` : ""}
+                        {typeof round.points === "number" ? ` | Punkte ${round.points}` : ""}
+                        {round.note ? ` | ${round.note}` : ""}
+                      </li>
                     ))
                   )}
                 </ul>

@@ -19,6 +19,22 @@ export function buildJournalRound(arrowCount: number, note?: string): JournalRou
   }
 }
 
+export function buildDetailedJournalRound(input: {
+  arrowCount: number
+  hits?: number | null
+  points?: number | null
+  note?: string
+}): JournalRound {
+  return {
+    id: `round-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+    createdAt: new Date().toISOString(),
+    arrowCount: input.arrowCount,
+    hits: typeof input.hits === "number" ? input.hits : undefined,
+    points: typeof input.points === "number" ? input.points : undefined,
+    note: input.note?.trim() ? input.note.trim() : undefined,
+  }
+}
+
 export function buildJournalEntry(
   title: string,
   notes: string,

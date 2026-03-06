@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest"
-import { buildJournalEntry, buildJournalRound, createDefaultFastTrainingSession } from "../lib/journal"
+import { buildDetailedJournalRound, buildJournalEntry, buildJournalRound, createDefaultFastTrainingSession } from "../lib/journal"
 import { DEFAULT_ADVANCED, DEFAULT_SETUP, DEFAULT_WIND } from "../store/useAppStore"
 
 describe("journal helpers", () => {
   it("builds entries with round and arrow totals", () => {
-    const rounds = [buildJournalRound(8), buildJournalRound(8), buildJournalRound(6)]
+    const rounds = [
+      buildDetailedJournalRound({ arrowCount: 8, hits: 8, points: 72, note: "sauber" }),
+      buildDetailedJournalRound({ arrowCount: 8, hits: 7, points: 68 }),
+      buildJournalRound(6),
+    ]
     const entry = buildJournalEntry("Training", "ok", "trocken", {
       setup: DEFAULT_SETUP,
       advanced: DEFAULT_ADVANCED,
@@ -19,6 +23,8 @@ describe("journal helpers", () => {
     expect(entry.roundCount).toBe(3)
     expect(entry.totalArrows).toBe(22)
     expect(entry.rounds).toHaveLength(3)
+    expect(entry.rounds[0]?.hits).toBe(8)
+    expect(entry.rounds[0]?.points).toBe(72)
   })
 
   it("creates a clean default fast training session", () => {

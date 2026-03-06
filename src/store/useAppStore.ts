@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { defaultPositionForCategory } from "../lib/componentsBuilder"
-import { buildJournalEntry, buildJournalRound, createDefaultFastTrainingSession } from "../lib/journal"
+import { buildDetailedJournalRound, buildJournalEntry, createDefaultFastTrainingSession } from "../lib/journal"
 import { migratePersistedState } from "../lib/storageMigrations"
 import type {
   AdvancedParams,
@@ -152,7 +152,7 @@ export interface AppStore extends AppState {
   removeJournalEntry: (entryId: string) => void
   updateFastTraining: (patch: Partial<FastTrainingSession>) => void
   startFastTraining: () => void
-  addFastTrainingRound: () => void
+  addFastTrainingRound: (details?: { hits?: number | null; points?: number | null; note?: string }) => void
   removeLastFastTrainingRound: () => void
   saveFastTrainingToJournal: () => JournalEntry | null
   resetFastTraining: () => void
@@ -344,14 +344,19 @@ export const useAppStore = create<AppStore>()(
           rounds: state.fastTraining.active ? state.fastTraining.rounds : [],
         },
       })),
-      addFastTrainingRound: () => set((state) => {
+      addFastTrainingRound: (details) => set((state) => {
         const arrowsPerRound = Math.max(1, Math.round(state.fastTraining.arrowsPerRound || 8))
         return {
           fastTraining: {
             ...state.fastTraining,
             active: true,
             startedAt: state.fastTraining.startedAt ?? new Date().toISOString(),
-            rounds: [...state.fastTraining.rounds, buildJournalRound(arrowsPerRound)],
+            rounds: [...state.fastTraining.rounds, buildDetailedJournalRound({
+              arrowCount: arrowsPerRound,
+              hits: details?.hits ?? null,
+              points: details?.points ?? null,
+              note: details?.note,
+            })],
           },
         }
       }),

@@ -105,6 +105,8 @@ export interface JournalRound {
   id: string
   createdAt: string
   arrowCount: number
+  hits?: number
+  points?: number
   note?: string
 }
 

@@ -43,6 +43,8 @@ function ensureJournalRound(round: Partial<JournalRound>, fallbackIndex: number,
     id: typeof round.id === "string" ? round.id : `round-${fallbackIndex}`,
     createdAt: typeof round.createdAt === "string" ? round.createdAt : new Date(0).toISOString(),
     arrowCount: typeof round.arrowCount === "number" ? round.arrowCount : fallbackArrowCount,
+    hits: typeof round.hits === "number" ? round.hits : undefined,
+    points: typeof round.points === "number" ? round.points : undefined,
     note: typeof round.note === "string" ? round.note : undefined,
   }
 }
