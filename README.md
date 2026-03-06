@@ -1,12 +1,12 @@
 # Arrow Trajectory Calculator
 
-React + TypeScript Single Page Application als Web-Nachbau der Excel-Dateien (Kompakt / Datenreihen) fuer Pfeilflug, Flugkurve und Kennwerte.
+React + TypeScript Single Page Application als eigenstaendige Ballistik-App fuer Pfeilflug, Flugkurve und Kennwerte.
 
 [![Deploy to GitHub Pages](https://github.com/patrick-zauta/arrow-trajectory-calculator/actions/workflows/deploy.yml/badge.svg)](https://github.com/patrick-zauta/arrow-trajectory-calculator/actions/workflows/deploy.yml)
 
 ## Features
 
-- Preset 1: `Standard (Excel Flugparabel_BSW)`
+- Preset 1: `Standard (Flugparabel_BSW)`
 - Preset 2: `Pip_ELB_50_Holz 55-60 violett.lime`
 - Einheitenumschaltung Geschwindigkeit: `fps` <-> `m/s`
 - Winkelmodus:

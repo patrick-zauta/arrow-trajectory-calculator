@@ -76,7 +76,6 @@ export function ArrowInputs({
           type="number"
           value={weightGrain}
           min={50}
-          max={2000}
           step={1}
           onChange={(event) => onWeightChange(Number(event.target.value))}
         />

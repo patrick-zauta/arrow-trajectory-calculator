@@ -4,7 +4,7 @@ import { fpsToMps } from "./units"
 export const PRESETS: BallisticsPreset[] = [
   {
     id: "standard-bsw",
-    label: "Standard (Excel Flugparabel_BSW)",
+    label: "Standard (Flugparabel_BSW)",
     speedFps: 150,
     diameterMm: 7.6,
     weightGrain: 440,

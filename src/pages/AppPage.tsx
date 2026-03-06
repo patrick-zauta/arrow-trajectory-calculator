@@ -222,9 +222,7 @@ export function AppPage() {
   const setWeight = (value: number) => {
     setFormState((current) => ({
       ...current,
-      weightGrain: Number(
-        clampToRange(sanitizeNumber(value, current.weightGrain), EXTENDED_LIMITS.weightGrain).toFixed(3),
-      ),
+      weightGrain: Number(Math.max(EXTENDED_LIMITS.weightGrain.min, sanitizeNumber(value, current.weightGrain)).toFixed(3)),
     }))
   }
 
@@ -288,7 +286,7 @@ export function AppPage() {
     <main className="page">
       <header className="hero">
         <h1>Pfeilflug Kalkulator</h1>
-        <p>Excel-Nachbau fuer Kompakt, Flugkurve und Kennwerte inklusive Datenreihen-Simulation.</p>
+        <p>Eigenstaendige Ballistik-App fuer Flugkurve, Kennwerte und dynamische Trajektorienanalyse.</p>
         <div className="hero-meta">
           <span>SPA</span>
           <span>React + TypeScript</span>
@@ -326,7 +324,7 @@ export function AppPage() {
 
       {validation.excelWarnings.length > 0 && (
         <section className="warning">
-          <strong>Hinweis: ausserhalb Excel Bereich.</strong>
+          <strong>Hinweis: ausserhalb Referenzbereich.</strong>
           <ul>
             {validation.excelWarnings.map((warning) => (
               <li key={warning}>{warning}</li>

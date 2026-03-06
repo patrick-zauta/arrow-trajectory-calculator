@@ -31,11 +31,8 @@ export function validateInputs(inputs: UserInputs, settings: AdvancedSettings): 
   if (inputs.diameterMm < EXTENDED_LIMITS.diameterMm.min || inputs.diameterMm > EXTENDED_LIMITS.diameterMm.max) {
     errors.push("Pfeildurchmesser ausserhalb des zulaessigen Bereichs (2.0 bis 20.0 mm).")
   }
-  if (
-    inputs.weightGrain < EXTENDED_LIMITS.weightGrain.min ||
-    inputs.weightGrain > EXTENDED_LIMITS.weightGrain.max
-  ) {
-    errors.push("Pfeilgewicht ausserhalb des zulaessigen Bereichs (50 bis 2000 grain).")
+  if (inputs.weightGrain < EXTENDED_LIMITS.weightGrain.min) {
+    errors.push("Pfeilgewicht ausserhalb des zulaessigen Bereichs (mindestens 50 grain).")
   }
   if (inputs.angleDeg < EXTENDED_LIMITS.angleDeg.min || inputs.angleDeg > EXTENDED_LIMITS.angleDeg.max) {
     errors.push("Abschusswinkel ausserhalb des zulaessigen Bereichs (0 bis 90 Grad).")
@@ -51,19 +48,13 @@ export function validateInputs(inputs: UserInputs, settings: AdvancedSettings): 
   }
 
   if (speedFps < EXCEL_LIMITS.speedFps.min || speedFps > EXCEL_LIMITS.speedFps.max) {
-    excelWarnings.push("Geschwindigkeit ausserhalb Excel Bereich (50 bis 500 fps)")
+    excelWarnings.push("Geschwindigkeit ausserhalb Referenzbereich (50 bis 500 fps)")
   }
   if (inputs.diameterMm < EXCEL_LIMITS.diameterMm.min || inputs.diameterMm > EXCEL_LIMITS.diameterMm.max) {
-    excelWarnings.push("Durchmesser ausserhalb Excel Bereich (4.0 bis 10.0 mm)")
-  }
-  if (
-    inputs.weightGrain < EXCEL_LIMITS.weightGrain.min ||
-    inputs.weightGrain > EXCEL_LIMITS.weightGrain.max
-  ) {
-    excelWarnings.push("Gewicht ausserhalb Excel Bereich (100 bis 600 grain)")
+    excelWarnings.push("Durchmesser ausserhalb Referenzbereich (4.0 bis 10.0 mm)")
   }
   if (inputs.angleDeg < EXCEL_LIMITS.angleDeg.min || inputs.angleDeg > EXCEL_LIMITS.angleDeg.max) {
-    excelWarnings.push("Winkel ausserhalb Excel Bereich (0 bis 90 Grad)")
+    excelWarnings.push("Winkel ausserhalb Referenzbereich (0 bis 90 Grad)")
   }
 
   return {

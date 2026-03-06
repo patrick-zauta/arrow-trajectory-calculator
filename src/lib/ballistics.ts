@@ -178,7 +178,31 @@ export function filterCurvePoints(points: TrajectoryPoint[], endDistanceM: numbe
     return []
   }
 
-  const filtered = points.filter((point) => point.xM <= endDistanceM)
+  const filtered: TrajectoryPoint[] = []
+  let lastX = -Infinity
+
+  for (const point of points) {
+    if (!Number.isFinite(point.xM) || !Number.isFinite(point.yM)) {
+      break
+    }
+
+    if (point.xM < 0) {
+      break
+    }
+
+    // Keep only the forward trajectory branch to avoid unstable tail points.
+    if (point.xM + 1e-9 < lastX) {
+      break
+    }
+
+    if (point.xM > endDistanceM) {
+      break
+    }
+
+    filtered.push(point)
+    lastX = point.xM
+  }
+
   if (filtered.length > 0) {
     return filtered
   }

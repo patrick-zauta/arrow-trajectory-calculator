@@ -11,7 +11,7 @@ export const DEFAULT_ADVANCED_SETTINGS: AdvancedSettings = {
 export const EXTENDED_LIMITS = {
   speedFps: { min: 20, max: 1200 },
   diameterMm: { min: 2.0, max: 20.0 },
-  weightGrain: { min: 50, max: 2000 },
+  weightGrain: { min: 50, max: Number.MAX_SAFE_INTEGER },
   angleDeg: { min: 0, max: 90 },
   dt: { min: 0.0005, max: 0.01 },
   maxTimeSec: { min: 5, max: 60 },
