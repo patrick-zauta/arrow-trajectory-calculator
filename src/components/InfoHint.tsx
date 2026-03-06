@@ -1,14 +1,18 @@
+import { useId } from "react"
+
 interface InfoHintProps {
   text: string
 }
 
 export function InfoHint({ text }: InfoHintProps) {
+  const tooltipId = useId()
+
   return (
-    <span className="info-hint" tabIndex={0} aria-label={text}>
-      <span className="info-hint-trigger" aria-hidden="true">
+    <span className="info-hint">
+      <button type="button" className="info-hint-trigger" aria-describedby={tooltipId} aria-label="Weitere Informationen" tabIndex={0}>
         i
-      </span>
-      <span className="info-hint-bubble" role="tooltip">
+      </button>
+      <span id={tooltipId} className="info-hint-bubble" role="tooltip" aria-hidden="true">
         {text}
       </span>
     </span>

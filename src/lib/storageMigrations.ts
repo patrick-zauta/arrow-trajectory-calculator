@@ -1,4 +1,5 @@
-import type { AppState, ArrowBuild, ArrowComponentItem, ComponentTemplate } from "./types"
+import { createDefaultFastTrainingSession } from "./journal"
+import type { AppState, ArrowBuild, ArrowComponentItem, ComponentTemplate, JournalEntry, JournalRound } from "./types"
 
 function ensureComponent(component: Partial<ArrowComponentItem>, fallbackIndex: number): ArrowComponentItem {
   return {
@@ -37,6 +38,39 @@ function ensureTemplate(template: Partial<ComponentTemplate>, fallbackIndex: num
   }
 }
 
+function ensureJournalRound(round: Partial<JournalRound>, fallbackIndex: number, fallbackArrowCount: number): JournalRound {
+  return {
+    id: typeof round.id === "string" ? round.id : `round-${fallbackIndex}`,
+    createdAt: typeof round.createdAt === "string" ? round.createdAt : new Date(0).toISOString(),
+    arrowCount: typeof round.arrowCount === "number" ? round.arrowCount : fallbackArrowCount,
+    note: typeof round.note === "string" ? round.note : undefined,
+  }
+}
+
+function ensureJournalEntry(entry: Partial<JournalEntry>, fallbackIndex: number): JournalEntry {
+  const arrowsPerRound = typeof entry.arrowsPerRound === "number" ? entry.arrowsPerRound : 8
+  const roundCount = typeof entry.roundCount === "number" ? entry.roundCount : 0
+  const rounds = Array.isArray(entry.rounds)
+    ? entry.rounds.map((round, index) => ensureJournalRound(round, index, arrowsPerRound))
+    : []
+  const totalArrows = typeof entry.totalArrows === "number"
+    ? entry.totalArrows
+    : (rounds.length > 0 ? rounds.reduce((sum, round) => sum + round.arrowCount, 0) : arrowsPerRound * roundCount)
+
+  return {
+    id: typeof entry.id === "string" ? entry.id : `journal-${fallbackIndex}`,
+    title: typeof entry.title === "string" ? entry.title : `Training ${fallbackIndex + 1}`,
+    createdAt: typeof entry.createdAt === "string" ? entry.createdAt : new Date(0).toISOString(),
+    notes: typeof entry.notes === "string" ? entry.notes : "",
+    weather: typeof entry.weather === "string" ? entry.weather : "",
+    arrowsPerRound,
+    roundCount: rounds.length > 0 ? rounds.length : roundCount,
+    totalArrows,
+    rounds,
+    snapshot: entry.snapshot as JournalEntry["snapshot"],
+  }
+}
+
 export function migratePersistedState(persisted: unknown, defaults: AppState): AppState {
   const source = typeof persisted === "object" && persisted !== null ? (persisted as Partial<AppState>) : {}
 
@@ -65,7 +99,16 @@ export function migratePersistedState(persisted: unknown, defaults: AppState): A
     arrowBuilds,
     activeArrowBuildId: typeof source.activeArrowBuildId === "string" ? source.activeArrowBuildId : defaults.activeArrowBuildId,
     chronoSessions: Array.isArray(source.chronoSessions) ? source.chronoSessions : defaults.chronoSessions,
-    journalEntries: Array.isArray(source.journalEntries) ? source.journalEntries : defaults.journalEntries,
+    journalEntries: Array.isArray(source.journalEntries) ? source.journalEntries.map((entry, index) => ensureJournalEntry(entry, index)) : defaults.journalEntries,
+    fastTraining: typeof source.fastTraining === "object" && source.fastTraining !== null
+      ? {
+          ...createDefaultFastTrainingSession(),
+          ...source.fastTraining,
+          rounds: Array.isArray(source.fastTraining.rounds)
+            ? source.fastTraining.rounds.map((round, index) => ensureJournalRound(round, index, source.fastTraining.arrowsPerRound ?? 8))
+            : [],
+        }
+      : defaults.fastTraining,
     heightDisplayUnit: source.heightDisplayUnit ?? defaults.heightDisplayUnit,
     uiPreferences: {
       ...defaults.uiPreferences,

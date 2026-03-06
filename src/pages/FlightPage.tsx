@@ -4,6 +4,7 @@ import { Link } from "react-router-dom"
 import { AdvancedSettingsPanel } from "../components/AdvancedSettingsPanel"
 import { AngleControl } from "../components/AngleControl"
 import { ArrowInputs } from "../components/ArrowInputs"
+import { DraftNumberInput } from "../components/DraftNumberInput"
 import { InfoHint } from "../components/InfoHint"
 import { MetricsCards } from "../components/MetricsCards"
 import { SupportPointsTable } from "../components/SupportPointsTable"
@@ -320,11 +321,11 @@ export function FlightPage() {
         <div className="layout-grid compact-grid">
           <label className="field">
             <span>Einschiess-Distanz (m) <InfoHint text="Der Solver berechnet den noetigen Winkel fuer diese Distanz und Zielhoehe." /></span>
-            <input type="number" value={zeroDistanceM} onChange={(event) => setZeroDistanceM(Number(event.target.value) || 0)} />
+            <DraftNumberInput value={zeroDistanceM} onCommit={(next) => setZeroDistanceM(next ?? zeroDistanceM)} />
           </label>
           <label className="field">
             <span>Zielhoehe (cm)</span>
-            <input type="number" value={zeroTargetHeightCm} onChange={(event) => setZeroTargetHeightCm(Number(event.target.value) || 0)} />
+            <DraftNumberInput value={zeroTargetHeightCm} onCommit={(next) => setZeroTargetHeightCm(next ?? zeroTargetHeightCm)} />
           </label>
         </div>
         <div className="result-grid">
@@ -346,9 +347,9 @@ export function FlightPage() {
         </div>
         <div className="inline-grid">
           <label className="field-inline"><input type="checkbox" checked={wind.enabled} onChange={(event) => updateWind({ enabled: event.target.checked })} /> Wind aktiv</label>
-          <label className="field"><span>Windgeschwindigkeit (m/s)</span><input type="number" value={wind.windSpeed_mps} step={0.1} onChange={(event) => updateWind({ windSpeed_mps: Number(event.target.value) || 0 })} /></label>
-          <label className="field"><span>Windrichtung (deg)</span><input type="number" value={wind.windDirection_deg} step={1} onChange={(event) => updateWind({ windDirection_deg: Number(event.target.value) || 0 })} /></label>
-          <label className="field"><span>Ziel Distanz fuer Drift (m)</span><input type="number" value={driftDistanceM} step={1} onChange={(event) => setDriftDistanceM(Number(event.target.value) || 0)} /></label>
+          <label className="field"><span>Windgeschwindigkeit (m/s)</span><DraftNumberInput value={wind.windSpeed_mps} onCommit={(next) => updateWind({ windSpeed_mps: next ?? wind.windSpeed_mps })} step={0.1} /></label>
+          <label className="field"><span>Windrichtung (deg)</span><DraftNumberInput value={wind.windDirection_deg} onCommit={(next) => updateWind({ windDirection_deg: next ?? wind.windDirection_deg })} step={1} /></label>
+          <label className="field"><span>Ziel Distanz fuer Drift (m)</span><DraftNumberInput value={driftDistanceM} onCommit={(next) => setDriftDistanceM(next ?? driftDistanceM)} step={1} /></label>
         </div>
         <p>Drift bei {driftDistanceM.toFixed(1)} m: {formatVerticalValue(driftAtTargetCm / 100, heightDisplayUnit)}</p>
         {driftSeries.length > 1 && (
@@ -379,8 +380,8 @@ export function FlightPage() {
         </div>
         <div className="layout-grid compact-grid">
           <label className="field-inline"><input type="checkbox" checked={terrain.enabled} onChange={(event) => updateTerrain({ enabled: event.target.checked })} /> Terrain aktiv</label>
-          <label className="field"><span>Steigung (deg)</span><input type="number" value={terrain.slope_deg} onChange={(event) => updateTerrain({ slope_deg: Number(event.target.value) || 0 })} /></label>
-          <label className="field"><span>Offset (m)</span><input type="number" value={terrain.offset_m} onChange={(event) => updateTerrain({ offset_m: Number(event.target.value) || 0 })} /></label>
+          <label className="field"><span>Steigung (deg)</span><DraftNumberInput value={terrain.slope_deg} onCommit={(next) => updateTerrain({ slope_deg: next ?? terrain.slope_deg })} /></label>
+          <label className="field"><span>Offset (m)</span><DraftNumberInput value={terrain.offset_m} onCommit={(next) => updateTerrain({ offset_m: next ?? terrain.offset_m })} /></label>
         </div>
         {terrainSeries.length > 1 && (
           <div className="chart-wrapper mini-chart">

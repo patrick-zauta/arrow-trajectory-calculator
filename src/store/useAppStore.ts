@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { defaultPositionForCategory } from "../lib/componentsBuilder"
+import { buildJournalEntry, buildJournalRound, createDefaultFastTrainingSession } from "../lib/journal"
 import { migratePersistedState } from "../lib/storageMigrations"
 import type {
   AdvancedParams,
@@ -11,6 +12,7 @@ import type {
   ChartMetric,
   ChronoSession,
   ComponentTemplate,
+  FastTrainingSession,
   HeightDisplayUnit,
   JournalEntry,
   Locale,
@@ -22,7 +24,7 @@ import type {
 } from "../lib/types"
 
 const STORAGE_KEY = "arrow-app-state-v1"
-const APP_SCHEMA_VERSION = 2
+const APP_SCHEMA_VERSION = 3
 
 function cloneComponents(components: ArrowComponentItem[]): ArrowComponentItem[] {
   return components.map((component) => ({ ...component }))
@@ -148,6 +150,12 @@ export interface AppStore extends AppState {
   removeChronoSession: (sessionId: string) => void
   addJournalEntry: (entry: JournalEntry) => void
   removeJournalEntry: (entryId: string) => void
+  updateFastTraining: (patch: Partial<FastTrainingSession>) => void
+  startFastTraining: () => void
+  addFastTrainingRound: () => void
+  removeLastFastTrainingRound: () => void
+  saveFastTrainingToJournal: () => JournalEntry | null
+  resetFastTraining: () => void
   resetToPresetDefaults: () => void
 }
 
@@ -166,6 +174,7 @@ export function createDefaultState(): AppState {
     activeArrowBuildId: SYSTEM_ARROW_BUILDS[0].id,
     chronoSessions: [],
     journalEntries: [],
+    fastTraining: createDefaultFastTrainingSession(),
     heightDisplayUnit: "cm",
     uiPreferences: { ...DEFAULT_UI_PREFERENCES },
   }
@@ -326,6 +335,63 @@ export const useAppStore = create<AppStore>()(
       removeChronoSession: (sessionId) => set((state) => ({ chronoSessions: state.chronoSessions.filter((entry) => entry.id !== sessionId) })),
       addJournalEntry: (entry) => set((state) => ({ journalEntries: [entry, ...state.journalEntries] })),
       removeJournalEntry: (entryId) => set((state) => ({ journalEntries: state.journalEntries.filter((entry) => entry.id !== entryId) })),
+      updateFastTraining: (patch) => set((state) => ({ fastTraining: { ...state.fastTraining, ...patch } })),
+      startFastTraining: () => set((state) => ({
+        fastTraining: {
+          ...state.fastTraining,
+          active: true,
+          startedAt: state.fastTraining.startedAt ?? new Date().toISOString(),
+          rounds: state.fastTraining.active ? state.fastTraining.rounds : [],
+        },
+      })),
+      addFastTrainingRound: () => set((state) => {
+        const arrowsPerRound = Math.max(1, Math.round(state.fastTraining.arrowsPerRound || 8))
+        return {
+          fastTraining: {
+            ...state.fastTraining,
+            active: true,
+            startedAt: state.fastTraining.startedAt ?? new Date().toISOString(),
+            rounds: [...state.fastTraining.rounds, buildJournalRound(arrowsPerRound)],
+          },
+        }
+      }),
+      removeLastFastTrainingRound: () => set((state) => ({
+        fastTraining: {
+          ...state.fastTraining,
+          rounds: state.fastTraining.rounds.slice(0, -1),
+        },
+      })),
+      saveFastTrainingToJournal: () => {
+        const state = get()
+        if (state.fastTraining.rounds.length === 0) {
+          return null
+        }
+
+        const activeArrowBuild = state.arrowBuilds.find((build) => build.id === state.activeArrowBuildId)
+        const entry = buildJournalEntry(
+          state.fastTraining.title,
+          state.fastTraining.notes,
+          state.fastTraining.weather,
+          {
+            setup: state.activeSetup,
+            advanced: state.advanced,
+            wind: state.wind,
+            activeArrowBuildId: state.activeArrowBuildId,
+            activeArrowBuildName: activeArrowBuild?.name ?? "Kein Pfeil",
+          },
+          {
+            arrowsPerRound: Math.max(1, Math.round(state.fastTraining.arrowsPerRound || 8)),
+            rounds: state.fastTraining.rounds,
+          },
+        )
+
+        set((current) => ({
+          journalEntries: [entry, ...current.journalEntries],
+          fastTraining: createDefaultFastTrainingSession(),
+        }))
+        return entry
+      },
+      resetFastTraining: () => set({ fastTraining: createDefaultFastTrainingSession() }),
       resetToPresetDefaults: () => get().applyPreset(SYSTEM_PRESETS[0].id),
     }),
     {
@@ -347,6 +413,7 @@ export const useAppStore = create<AppStore>()(
         activeArrowBuildId: state.activeArrowBuildId,
         chronoSessions: state.chronoSessions,
         journalEntries: state.journalEntries,
+        fastTraining: state.fastTraining,
         heightDisplayUnit: state.heightDisplayUnit,
         uiPreferences: state.uiPreferences,
       }),

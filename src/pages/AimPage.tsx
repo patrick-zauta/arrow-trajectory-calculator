@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import { DraftNumberInput } from "../components/DraftNumberInput"
 import { InfoHint } from "../components/InfoHint"
 import { useDebouncedValue } from "../hooks/useDebouncedValue"
 import { calculateHoldover, recommendPin, solveAngleForTarget, type AimMode } from "../lib/aim"
@@ -104,11 +105,11 @@ export function AimPage() {
         <div className="layout-grid compact-grid">
           <label className="field">
             <span>Ziel Distanz (m) <InfoHint text="Distanz zum Zielpunkt, fuer den Holdover oder ein neuer Trefferwinkel berechnet werden soll." /></span>
-            <input type="number" value={targetDistance_m} onChange={(event) => setTargetDistance(Number(event.target.value) || 0)} />
+            <DraftNumberInput value={targetDistance_m} onCommit={(next) => setTargetDistance(next ?? targetDistance_m)} />
           </label>
           <label className="field">
             <span>Ziel Hoehe (cm, + hoeher) <InfoHint text="Positive Werte liegen ueber der Startlinie, negative Werte darunter." /></span>
-            <input type="number" value={targetHeight_cm} onChange={(event) => setTargetHeight(Number(event.target.value) || 0)} />
+            <DraftNumberInput value={targetHeight_cm} onCommit={(next) => setTargetHeight(next ?? targetHeight_cm)} />
           </label>
           <label className="field">
             <span>Modus <InfoHint text="Holdover nutzt den aktuellen Winkel. Solver sucht einen Winkel, der den Zielpunkt moeglichst genau trifft." /></span>

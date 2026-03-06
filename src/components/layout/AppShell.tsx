@@ -106,7 +106,7 @@ export function AppShell() {
           <button type="button" onClick={() => navigate("/flight")}>{t(locale, "gotoFlight")}</button>
         </div>
         <div className="setup-summary muted-note">
-          <span>Idee von Guido Zauta | Umsetzung von Patrick Zauta | Release v0.0.1</span>
+          <span>Idee von Guido Zauta | Umsetzung von Patrick Zauta | Release v0.1.0</span>
         </div>
         {toast && <div className="toast">{toast}</div>}
       </header>
@@ -121,3 +121,4 @@ export function AppShell() {
     </div>
   )
 }
+

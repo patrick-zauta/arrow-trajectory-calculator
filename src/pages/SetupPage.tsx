@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { DraftNumberInput } from "../components/DraftNumberInput"
 import { InfoHint } from "../components/InfoHint"
 import { useDebouncedValue } from "../hooks/useDebouncedValue"
 import { computeChronoStats } from "../lib/chrono"
@@ -95,11 +96,11 @@ export function SetupPage() {
           </label>
           <label className="field">
             <span>Draw Weight (lbs)</span>
-            <input type="number" value={drawWeight_lbs} onChange={(event) => setDrawWeight(Number(event.target.value) || 0)} />
+            <DraftNumberInput value={drawWeight_lbs} onCommit={(next) => setDrawWeight(next ?? drawWeight_lbs)} />
           </label>
           <label className="field">
             <span>Draw Length (in)</span>
-            <input type="number" value={drawLength_in} onChange={(event) => setDrawLength(Number(event.target.value) || 0)} />
+            <DraftNumberInput value={drawLength_in} onCommit={(next) => setDrawLength(next ?? drawLength_in)} />
           </label>
           <label className="field">
             <span>IBO Speed (fps, optional)</span>
@@ -107,15 +108,15 @@ export function SetupPage() {
           </label>
           <label className="field">
             <span>Effizienzfaktor</span>
-            <input type="number" value={efficiencyFactor} step={0.01} onChange={(event) => setEfficiency(Number(event.target.value) || 0)} />
+            <DraftNumberInput value={efficiencyFactor} onCommit={(next) => setEfficiency(next ?? efficiencyFactor)} step={0.01} />
           </label>
           <label className="field">
             <span>Pfeilmasse (grain)</span>
-            <input type="number" value={arrowMass_grain} onChange={(event) => setArrowMass(Number(event.target.value) || 0)} />
+            <DraftNumberInput value={arrowMass_grain} onCommit={(next) => setArrowMass(next ?? arrowMass_grain)} />
           </label>
           <label className="field">
             <span>Extra Masse (grain)</span>
-            <input type="number" value={extraMass_grain} onChange={(event) => setExtraMass(Number(event.target.value) || 0)} />
+            <DraftNumberInput value={extraMass_grain} onCommit={(next) => setExtraMass(next ?? extraMass_grain)} />
           </label>
         </div>
 

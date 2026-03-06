@@ -6,6 +6,7 @@
 - Type: Single Page Application (React + TypeScript + Vite)
 - Runtime: Browser only (no backend, no API calls)
 - Deployment target: GitHub Pages (static)
+- Current release: `v0.1.0`
 
 ## Goals
 
@@ -13,8 +14,9 @@
   - Kompakt
   - Datenreihen
 - Provide info sections for Theorie and Quellen.
-- Keep simulation behavior Excel-compatible, including:
+- Keep simulation behavior Excel-compatible where the reference mode requires it, including:
   - `asy = as * abs(vy / speed)`
+- Maintain a production-quality browser app with strong consistency across all calculators.
 
 ## Core Technical Rules
 
@@ -35,8 +37,8 @@
 ## App Structure
 
 - `src/components`: UI modules
-- `src/hooks`: reusable hooks (debounce, localStorage)
-- `src/lib`: simulation, units, validation, presets, csv
+- `src/hooks`: reusable hooks (debounce, localStorage, input helpers)
+- `src/lib`: simulation, units, validation, presets, csv, analytics helpers
 - `src/pages`: page composition
 - `src/tests`: Vitest tests
 - `src/types`: shared TS types
@@ -59,6 +61,15 @@
 - Support points (table):
   - target distances every 2m
   - approx-match via last index where `x <= target`
+
+## Quality Rules introduced up to v0.1.0
+
+- Use central conversion and adapter helpers where possible.
+- Prefer draft-based numeric inputs for manual editing so fields do not jump during typing.
+- Keep global state migration-safe.
+- Prefer lazy-loading for larger route modules.
+- Keep tooltips accessible and non-disruptive for headings and labels.
+- Preserve consistent chart semantics across pages.
 
 ## Input Limits
 
@@ -88,15 +99,24 @@ Legacy Excel ranges (warning only):
     - Nullpunkt ~= 180.0572
     - Scheitel Distanz ~= 95.7462
     - Scheitel Hoehe ~= 51.2496
+- Cover core helpers for:
+  - zeroing
+  - grouping
+  - chrono statistics
+  - terrain
+  - builder/FOC
+  - store persistence
 
 ## Versioning Policy
 
 - Version format must be `vX.Y.Z`.
-- Start version: `v0.0.0`.
-- Every patch release increments by `+0.0.1`.
+- Initial baseline: `v0.0.0`.
+- Patch release increments by `+0.0.1`.
+- Current quality release: `v0.1.0`.
 - Examples:
   - `v0.0.0 -> v0.0.1`
   - `v0.0.1 -> v0.0.2`
+  - `v0.0.10 -> v0.1.0`
 - For this repository, default to patch updates unless explicitly specified otherwise.
 
 ## Deployment Rules
@@ -114,3 +134,4 @@ Legacy Excel ranges (warning only):
 - Avoid `any`.
 - Keep logic in `lib/ballistics.ts` deterministic and testable.
 - Maintain relative asset paths for Pages compatibility.
+- Avoid reintroducing duplicate solver or formatting logic across pages.

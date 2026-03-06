@@ -63,8 +63,8 @@ describe("useAppStore", () => {
     const { useAppStore, createDefaultState } = await import("../store/useAppStore")
     useAppStore.setState(createDefaultState())
     useAppStore.getState().setComponents([
-      { id: "a", name: "Schaft", weight_grain: 300, category: "Shaft" },
-      { id: "b", name: "Spitze", weight_grain: 120, category: "Spitze" },
+      { id: "a", name: "Schaft", weight_grain: 300, category: "Shaft", position_mm: 380 },
+      { id: "b", name: "Spitze", weight_grain: 120, category: "Spitze", position_mm: 760 },
     ])
 
     const build = useAppStore.getState().saveCurrentComponentsAsArrowBuild("Mein Pfeil")
@@ -72,5 +72,24 @@ describe("useAppStore", () => {
 
     expect(useAppStore.getState().activeArrowBuildId).toBe(build.id)
     expect(useAppStore.getState().activeSetup.m_grain).toBe(420)
+  })
+
+  it("tracks fast training rounds and saves them into the journal", async () => {
+    const { useAppStore, createDefaultState } = await import("../store/useAppStore")
+    useAppStore.setState(createDefaultState())
+
+    useAppStore.getState().updateFastTraining({ title: "Abendtraining", arrowsPerRound: 8 })
+    useAppStore.getState().startFastTraining()
+    useAppStore.getState().addFastTrainingRound()
+    useAppStore.getState().addFastTrainingRound()
+
+    const entry = useAppStore.getState().saveFastTrainingToJournal()
+    const state = useAppStore.getState()
+
+    expect(entry?.roundCount).toBe(2)
+    expect(entry?.totalArrows).toBe(16)
+    expect(state.journalEntries[0]?.title).toBe("Abendtraining")
+    expect(state.fastTraining.active).toBe(false)
+    expect(state.fastTraining.rounds).toHaveLength(0)
   })
 })

@@ -101,13 +101,34 @@ export interface SetupSnapshot {
   activeArrowBuildName: string
 }
 
+export interface JournalRound {
+  id: string
+  createdAt: string
+  arrowCount: number
+  note?: string
+}
+
 export interface JournalEntry {
   id: string
   title: string
   createdAt: string
   notes: string
   weather: string
+  arrowsPerRound: number
+  roundCount: number
+  totalArrows: number
+  rounds: JournalRound[]
   snapshot: SetupSnapshot
+}
+
+export interface FastTrainingSession {
+  active: boolean
+  title: string
+  weather: string
+  notes: string
+  arrowsPerRound: number
+  rounds: JournalRound[]
+  startedAt: string | null
 }
 
 export interface UiPreferences {
@@ -131,6 +152,7 @@ export interface AppState {
   activeArrowBuildId: string
   chronoSessions: ChronoSession[]
   journalEntries: JournalEntry[]
+  fastTraining: FastTrainingSession
   heightDisplayUnit: HeightDisplayUnit
   uiPreferences: UiPreferences
 }

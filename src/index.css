@@ -78,6 +78,7 @@ textarea {
 button,
 input,
 select,
+textarea,
 summary,
 .tab-link,
 .card {
@@ -202,6 +203,13 @@ button.active {
   color: var(--primary-contrast);
   border-color: transparent;
   box-shadow: 0 10px 24px rgba(39, 177, 255, 0.28);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+  transform: none;
+  box-shadow: none;
 }
 
 .tabs-menu-btn {
@@ -529,7 +537,8 @@ button.active {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   border: 1px solid rgba(148, 178, 214, 0.22);
   border-radius: 0.92rem;
@@ -540,7 +549,8 @@ select {
 }
 
 input:hover,
-select:hover {
+select:hover,
+textarea:hover {
   border-color: rgba(39, 177, 255, 0.32);
 }
 
@@ -608,6 +618,19 @@ input[type="radio"] {
 .quick-actions {
   margin-bottom: 1rem;
   justify-content: space-between;
+}
+
+.fast-training-plus {
+  min-width: 3rem;
+  min-height: 3rem;
+  border-radius: 999px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  background: linear-gradient(135deg, rgba(39, 177, 255, 0.94), rgba(100, 213, 255, 0.94));
+  color: var(--primary-contrast);
+  border-color: transparent;
+  box-shadow: 0 10px 24px rgba(39, 177, 255, 0.28);
 }
 
 .fine-panel {
@@ -695,6 +718,7 @@ input[type="radio"] {
 }
 
 .info-hint-trigger {
+  appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -708,6 +732,7 @@ input[type="radio"] {
   font-weight: 700;
   text-transform: none;
   letter-spacing: 0;
+  padding: 0;
 }
 
 .info-hint-bubble {
@@ -948,6 +973,21 @@ details[open] summary {
 
   .chart-wrapper {
     min-height: 260px;
+  }
+
+  .card {
+    padding: 0.95rem;
+  }
+
+  .layout-grid,
+  .result-grid,
+  .dashboard-strip,
+  .app-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-wrapper table {
+    min-width: 460px;
   }
 
   .site-footer {
