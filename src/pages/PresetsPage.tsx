@@ -144,9 +144,14 @@ export function PresetsPage() {
       <header className="hero">
         <h2>Preset Manager</h2>
         <p>Presets verwalten, Pfeile konfigurieren, importieren/exportieren und teilen.</p>
+        <div className="hero-meta">
+          <span>Aktiver Pfeil: {activeArrowBuild?.name ?? "Kein Pfeil"}</span>
+          <span>Gespeicherte Pfeile: {arrowBuilds.length}</span>
+          <span>Presets gesamt: {presets.length}</span>
+        </div>
       </header>
 
-      <section className="card inline-actions">
+      <section className="card inline-actions accent-card accent-primary">
         <button type="button" onClick={exportPresets}>Presets exportieren</button>
         <label className="field">
           <span>Import Datei</span>
@@ -236,6 +241,25 @@ export function PresetsPage() {
         </section>
       )}
 
+      <section className="dashboard-strip">
+        <article className="dashboard-stat">
+          <span className="dashboard-label">Aktiver Builder</span>
+          <strong>{activeArrowBuild?.name ?? "Kein Profil"}</strong>
+        </article>
+        <article className="dashboard-stat">
+          <span className="dashboard-label">Komponenten</span>
+          <strong>{components.length}</strong>
+        </article>
+        <article className="dashboard-stat">
+          <span className="dashboard-label">Gesamtgewicht</span>
+          <strong>{totalWeight.toFixed(2)} grain</strong>
+        </article>
+        <article className="dashboard-stat">
+          <span className="dashboard-label">Active Setup</span>
+          <strong>{setup.m_grain.toFixed(1)} grain</strong>
+        </article>
+      </section>
+
       <section className="card">
         <h3>Presets</h3>
         <div className="table-wrapper">
@@ -269,7 +293,7 @@ export function PresetsPage() {
         </div>
       </section>
 
-      <section className="card">
+      <section className="card accent-card accent-cyan">
         <div className="table-header">
           <div>
             <h3>Arrow Builder</h3>
@@ -314,7 +338,7 @@ export function PresetsPage() {
         </div>
       </section>
 
-      <section className="card">
+      <section className="card accent-card accent-amber">
         <div className="table-header">
           <div>
             <h3>Komponenten Builder</h3>

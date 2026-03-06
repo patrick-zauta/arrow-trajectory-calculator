@@ -25,6 +25,6 @@ describe("compare page", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "Setup A duplizieren" })[0])
 
-    expect(screen.getByText("Setup C")).toBeInTheDocument()
+    expect(screen.getAllByText("Setup C").length).toBeGreaterThan(0)
   })
 })

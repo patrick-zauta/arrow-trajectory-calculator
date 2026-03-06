@@ -152,9 +152,26 @@ export function ComparePage() {
       <header className="hero">
         <h2>Vergleich</h2>
         <p>Vergleich von zwei bis vier Setups mit Overlay Chart und Kennwerten.</p>
+        <div className="hero-meta">
+          <span>Sichtbare Setups: {setups.filter((entry) => entry.visible).length}</span>
+          <span>Maximal 4 Setups</span>
+          <span>Wind: {wind.enabled ? "aktiv" : "aus"}</span>
+        </div>
       </header>
 
-      <section className="card">
+      <section className="dashboard-strip">
+        {setups.map((entry) => (
+          <article className="dashboard-stat compare-legend-card" key={entry.id}>
+            <span className="compare-swatch" style={{ backgroundColor: entry.color }} aria-hidden="true" />
+            <div>
+              <span className="dashboard-label">{entry.name}</span>
+              <strong>{entry.visible ? "sichtbar" : "ausgeblendet"}</strong>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="card accent-card accent-primary">
         <div className="inline-actions">
           <button type="button" onClick={duplicateSetupA} disabled={setups.length >= 4}>
             Setup A duplizieren
@@ -176,9 +193,12 @@ export function ComparePage() {
 
         <div className="layout-grid">
           {setups.map((entry) => (
-            <article className="card" key={entry.id}>
+            <article className="card compare-setup-card" key={entry.id}>
               <div className="table-header">
-                <h3>{entry.name}</h3>
+                <div className="compare-card-head">
+                  <span className="compare-swatch" style={{ backgroundColor: entry.color }} aria-hidden="true" />
+                  <h3>{entry.name}</h3>
+                </div>
                 {entry.id !== "A" && (
                   <button type="button" onClick={() => setSetups((current) => current.filter((setup) => setup.id !== entry.id))}>
                     Entfernen
@@ -266,7 +286,7 @@ export function ComparePage() {
         </div>
       </section>
 
-      <section className="card">
+      <section className="card accent-card accent-cyan">
         <h3>Chart Overlay</h3>
         <div className="chart-wrapper">
           <ResponsiveContainer width="100%" height={320}>
@@ -284,7 +304,7 @@ export function ComparePage() {
         </div>
       </section>
 
-      <section className="card">
+      <section className="card accent-card accent-amber">
         <h3>Kennwerte</h3>
         <div className="table-wrapper">
           <table>

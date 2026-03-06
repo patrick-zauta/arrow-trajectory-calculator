@@ -388,7 +388,26 @@ export function FlightPage() {
         </div>
       </header>
 
-      <section className="card quick-actions">
+      <section className="dashboard-strip">
+        <article className="dashboard-stat">
+          <span className="dashboard-label">Aktives Preset</span>
+          <strong>{presets.find((preset) => preset.id === activePresetId)?.name ?? "Kein Preset"}</strong>
+        </article>
+        <article className="dashboard-stat">
+          <span className="dashboard-label">Simulation</span>
+          <strong>{advanced.simulationMode === "physics" ? "Physik sauber" : "Referenzmodus"}</strong>
+        </article>
+        <article className="dashboard-stat">
+          <span className="dashboard-label">Geschwindigkeit</span>
+          <strong>{speedDisplayValue.toFixed(1)} {speedUnit}</strong>
+        </article>
+        <article className="dashboard-stat">
+          <span className="dashboard-label">Gewicht</span>
+          <strong>{setup.m_grain.toFixed(1)} grain</strong>
+        </article>
+      </section>
+
+      <section className="card quick-actions accent-card accent-primary">
         <button type="button" onClick={() => applyPreset(activePresetId)}>
           Reset auf Preset
         </button>
@@ -420,7 +439,7 @@ export function FlightPage() {
       </section>
 
       <div className="layout-grid">
-        <section className="card">
+        <section className="card panel-lift">
           <h3>Preset</h3>
           <label className="field">
             <span>Auswahl</span>
@@ -454,7 +473,7 @@ export function FlightPage() {
           onSpeedValueChange={setSpeedValue}
           onSpeedUnitChange={(unit) => setSpeedUnit(unit)}
           onDiameterChange={(value) => updateSetup({ d_mm: Math.max(2, value) })}
-          onWeightChange={(value) => updateSetup({ m_grain: Math.max(50, value) })}
+          onWeightChange={(value) => updateSetup({ m_grain: Number.isFinite(value) ? value : 0 })}
         />
 
         <AngleControl
@@ -482,7 +501,7 @@ export function FlightPage() {
         />
       </div>
 
-      <section className="card">
+      <section className="card accent-card accent-cyan">
         <div className="table-header">
           <div>
             <h3>Wind und Seitenabweichung</h3>
@@ -602,7 +621,7 @@ export function FlightPage() {
         </>
       )}
 
-      <details className="card">
+      <details className="card accent-card accent-amber">
         <summary>Kalibrierung</summary>
         <div className="layout-grid compact-grid">
           <label className="field">
